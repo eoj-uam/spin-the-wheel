@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spin the Wheel</title>
+  <style>
+    :root {
+      --bg: linear-gradient(to bottom right, #e0f7fa, #80deea);
+      --text-color: #000;
+      --accent: #00796b;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      margin: 0.5rem 0 0.25rem;
+    }
+
+    p {
+      font-size: 0.9rem;
+      margin: 0.25rem 0;
+      padding: 0 1rem;
+    }
+
+    #optionsForm {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      width: 100%;
+    }
+
+    #optionsInput {
+      width: 90%;
+      max-width: 400px;
+      padding: 0.5rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    #optionsForm button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      margin-top: 0.5rem;
+    }
+
+    #themeSelector {
+      font-size: 1rem;
+      margin: 0.5rem 0;
+    }
+
+    #wheel-wrapper {
+      position: relative;
+      width: min(90vw, 400px);
+      height: min(90vw, 400px);
+      margin-top: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #pointer {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 30px solid #d32f2f;
+      z-index: 10;
+    }
+
+    #spin {
+      padding: 0.6rem 1.4rem;
+      font-size: 1.1rem;
+      background-color: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 0.5rem 0;
+    }
+
+    #spin:hover {
+      background-color: #004d40;
+    }
+
+    #result {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #00695c;
+      margin: 0.3rem;
+    }
+
+    #history {
+      font-size: 0.8rem;
+      padding: 0 1rem;
+      word-wrap: break-word;
+    }
+
+    #downloadImage {
+      font-size: 0.9rem;
+      padding: 0.4rem 1rem;
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎯 Spin the Wheel</h1>
+  <p>Enter choices separated by commas:</p>
+  <form id="optionsForm">
+    <input type="text" id="optionsInput" placeholder="e.g. 🍕, 🍔, 🍣" required />
+    <button type="submit">Update</button>
+  </form>
+
+  <select id="themeSelector">
+    <option value="light">Light</option>
+    <option value="dark">Dark</option>
+    <option value="neon">Neon</option>
+  </select>
+
+  <div id="wheel-wrapper">
+    <canvas id="wheel" width="400" height="400"></canvas>
+    <div id="pointer"></div>
+  </div>
+
+  <button id="spin">SPIN</button>
+  <div id="result"></div>
+  <div id="history"></div>
+  <button id="downloadImage">📷 Save Image</button>
+
+  <audio id="tickSound" src="https://freesound.org/data/previews/341/341695_6266601-lq.mp3"></audio>
+  <audio id="winSound" src="https://freesound.org/data/previews/320/320655_5260877-lq.mp3"></audio>
+
+  <!-- ✅ Confetti library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <script>
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    const spinBtn = document.getElementById("spin");
+    const resultDiv = document.getElementById("result");
+    const optionsInput = document.getElementById("optionsInput");
+    const pointer = document.getElementById("pointer");
+    const historyDiv = document.getElementById("history");
+    const tickSound = document.getElementById("tickSound");
+    const winSound = document.getElementById("winSound");
+    const themeSelector = document.getElementById("themeSelector");
+
+    let options = ["✅ Yes", "❌ No", "🤔 Maybe"];
+    let startAngle = 0;
+    let arc = Math.PI * 2 / options.length;
+    let spinAngle = 0;
+    let spinning = false;
+    let history = [];
+
+    function drawWheel() {
+      const radius = canvas.width / 2;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      arc = Math.PI * 2 / options.length;
+
+      for (let i = 0; i < options.length; i++) {
+        const angle = startAngle + i * arc;
+        ctx.beginPath();
+        ctx.fillStyle = `hsl(${i * 360 / options.length}, 80%, 70%)`;
+        ctx.moveTo(radius, radius);
+        ctx.arc(radius, radius, radius, angle, angle + arc, false);
+        ctx.lineTo(radius, radius);
+        ctx.fill();
+        ctx.save();
+        ctx.translate(radius, radius);
+        ctx.rotate(angle + arc / 2);
+        ctx.fillStyle = "#000";
+        ctx.font = "14px sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(options[i], radius - 10, 10);
+        ctx.restore();
+      }
+    }
+
+    function spinWheel() {
+      if (spinning) return;
+      spinning = true;
+      let spinTime = 0;
+      const spinDuration = 3000;
+      const initialSpeed = 0.4;
+      let lastSegment = -1;
+
+      function rotate() {
+        spinTime += 30;
+        const ease = 1 - Math.pow(spinTime / spinDuration, 3);
+        const angleStep = initialSpeed * ease;
+        spinAngle += angleStep;
+        startAngle += angleStep;
+        drawWheel();
+
+        const currentSegment = Math.floor(startAngle / arc);
+        if (currentSegment !== lastSegment) {
+          tickSound.currentTime = 0;
+          tickSound.play();
+          lastSegment = currentSegment;
+        }
+
+        if (spinTime < spinDuration) {
+          requestAnimationFrame(rotate);
+        } else {
+          spinning = false;
+          displayResult();
+        }
+      }
+
+      rotate();
+    }
+
+    function displayResult() {
+      const degrees = startAngle * 180 / Math.PI + 90;
+      const index = Math.floor((360 - degrees % 360) / (360 / options.length)) % options.length;
+      const result = options[index];
+      resultDiv.textContent = "Result: " + result;
+
+      winSound.currentTime = 0;
+      winSound.play();
+
+      // 🎉 Confetti effect
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.2 }
+      });
+
+      history.unshift(result);
+      if (history.length > 3) history.pop();
+      historyDiv.innerHTML = '<strong>History:</strong><br>' + history.join(", ");
+    }
+
+    document.getElementById("optionsForm").addEventListener("submit", e => {
+      e.preventDefault();
+      const input = optionsInput.value.trim();
+      if (input) {
+        options = input.split(",").map(opt => opt.trim()).filter(Boolean);
+        startAngle = 0;
+        drawWheel();
+        resultDiv.textContent = "";
+        history = [];
+        historyDiv.textContent = "";
+      }
+    });
+
+    themeSelector.addEventListener("change", () => {
+      const theme = themeSelector.value;
+      if (theme === "dark") {
+        document.body.style.background = "linear-gradient(to bottom right, #2c3e50, #34495e)";
+        document.body.style.color = "#fff";
+      } else if (theme === "neon") {
+        document.body.style.background = "linear-gradient(to bottom right, #1a1a1a, #0f0)";
+        document.body.style.color = "#0f0";
+      } else {
+        document.body.style.background = "linear-gradient(to bottom right, #e0f7fa, #80deea)";
+        document.body.style.color = "#000";
+      }
+      drawWheel();
+    });
+
+    document.getElementById("downloadImage").addEventListener("click", () => {
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = image;
+      link.download = "wheel.png";
+      link.click();
+    });
+
+    spinBtn.addEventListener("click", spinWheel);
+    drawWheel();
+  </script>
+</body>
+</html>

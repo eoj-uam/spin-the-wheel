@@ -1,24 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Blog – Spin The Wheel</title>
+
+<style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    padding: 80px 20px;
+    background: linear-gradient(to bottom right, #e0f7fa, #80deea);
+    color: #000;
+  }
+
+  /* Top Navigation */
+  #top-nav {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid #ccc;
+    padding: 0.5rem 1rem;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+  }
+
+  #top-nav a {
+    text-decoration: none;
+    font-size: 1rem;
+    color: #00796b;
+    font-weight: 600;
+    margin-left: 1rem;
+  }
+
+  #top-nav a:hover {
+    color: #004d40;
+  }
+
+  .site-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #004d40;
+  }
+
+  .blog-container {
+    max-width: 850px;
+    margin: auto;
+  }
+
+  .post {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+  }
+
+  .post:hover {
+    transform: translateY(-3px);
+  }
+
+  .post a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+
+  .post h2 {
+    margin-top: 0;
+  }
+</style>
+</head>
+
+<body>
+
+<header id="top-nav">
+  <div class="nav-left">
+    <a href="index.html" class="site-title">Spin The Wheel</a>
+  </div>
+  <nav class="nav-right">
+    <a href="blog.html">Blog</a>
+    <a href="about.html">About</a>
+  </nav>
+</header>
+
 <div class="blog-container">
   <h1>Spin The Wheel Blog</h1>
 
   <div class="post">
-    <a href="/post1.html" style="text-decoration:none; color: inherit;">
+    <a href="post1.html">
       <h2>Why Randomness Makes Decisions Easier</h2>
-      <p>Sometimes the hardest part of a choice is making it. A spinning wheel removes stress and overthinking.</p>
+      <p>Sometimes the hardest part of making a choice is overthinking it. By letting chance decide with a spinning wheel, you can reduce stress, avoid decision fatigue, and make life more fun. Learn how randomness can improve your daily decisions and make choices feel effortless.</p>
     </a>
   </div>
 
   <div class="post">
-    <a href="/post2.html" style="text-decoration:none; color: inherit;">
+    <a href="post2.html">
       <h2>Top 10 Creative Uses for a Decision Wheel</h2>
-      <p>From settling arguments to picking dinner, here are fun ways to spin your way through life.</p>
+      <p>From settling debates among friends to picking what to eat for dinner, a decision wheel has endless creative uses. Discover ten innovative ways to use a spinning wheel in your personal and professional life to make decisions more entertaining and fair.</p>
     </a>
   </div>
 
   <div class="post">
-    <a href="/post3.html" style="text-decoration:none; color: inherit;">
+    <a href="post3.html">
       <h2>Should You Let Chance Decide Your Next Meal?</h2>
-      <p>Short answer: Yes. Long answer: Still yes.</p>
+      <p>Deciding what to eat can be surprisingly stressful. A decision wheel adds excitement and spontaneity to meal planning. Learn why letting chance guide your next meal might lead to happier taste buds and more memorable dining experiences.</p>
     </a>
   </div>
+
 </div>
+
+</body>
+</html>

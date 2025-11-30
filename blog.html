@@ -12,21 +12,35 @@
     padding: 80px 20px;
     background: linear-gradient(to bottom right, #e0f7fa, #80deea);
     color: #000;
-    line-height: 1.6;
   }
 
+  /* Top Navigation Bar */
   #top-nav {
     width: 100%;
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.9);
     backdrop-filter: blur(6px);
     border-bottom: 1px solid #ccc;
     padding: 0.5rem 1rem;
+    box-sizing: border-box;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap; /* allow wrapping on small screens */
     position: fixed;
     top: 0;
+    left: 0;
     z-index: 1000;
+  }
+
+  .nav-left {
+    display: flex;
+    align-items: center;
+  }
+
+  .nav-right {
+    display: flex;
+    flex-wrap: wrap; /* wrap links if needed */
+    gap: 0.5rem;
   }
 
   #top-nav a {
@@ -34,7 +48,8 @@
     font-size: 1rem;
     color: #00796b;
     font-weight: 600;
-    margin-left: 1rem;
+    margin: 0 0.5rem;
+    white-space: nowrap; /* prevent breaking inside links */
   }
 
   #top-nav a:hover {
@@ -59,15 +74,6 @@
     margin-bottom: 25px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
-
-  .post h2 a {
-    color: #004d40;
-    text-decoration: none;
-  }
-
-  .post h2 a:hover {
-    text-decoration: underline;
-  }
 </style>
 </head>
 
@@ -87,18 +93,18 @@
   <h1>Spin The Wheel Blog</h1>
 
   <div class="post">
-    <h2><a href="post1.html">Why Randomness Makes Decisions Easier</a></h2>
-    <p>Sometimes the hardest part of a choice is making it. A spinning wheel removes stress and overthinking.</p>
+    <h2>Why Randomness Makes Decisions Easier</h2>
+    <p>Sometimes the hardest part of a choice is making it. A spinning wheel removes stress and overthinking. By introducing randomness, decision-making becomes faster and more enjoyable. Whether you’re deciding what to eat, which movie to watch, or how to split tasks among friends, using a decision wheel adds an element of fun while saving time. Random decision tools also help reduce the mental burden of weighing pros and cons endlessly, giving you instant clarity. Embrace chance, and let the wheel decide your next move with confidence!</p>
   </div>
 
   <div class="post">
-    <h2><a href="post2.html">Top 10 Creative Uses for a Decision Wheel</a></h2>
+    <h2>Top 10 Creative Uses for a Decision Wheel</h2>
     <p>From settling arguments to picking dinner, here are fun ways to spin your way through life.</p>
   </div>
 
   <div class="post">
-    <h2><a href="post3.html">Should You Let Chance Decide Your Next Meal?</a></h2>
-    <p>Short answer: Yes. Long answer: Still yes. Learn how a decision wheel can simplify your mealtime decisions.</p>
+    <h2>Should You Let Chance Decide Your Next Meal?</h2>
+    <p>Short answer: Yes. Long answer: Still yes.</p>
   </div>
 </div>
 

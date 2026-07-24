@@ -57,8 +57,6 @@
   const saveImgBtn = document.getElementById("saveImgBtn");
   const presetsRow = document.getElementById("presetsRow");
   const historyRow = document.getElementById("historyRow");
-  const tickSound = document.getElementById("tickSound");
-  const winSound = document.getElementById("winSound");
 
   const CHOICES_KEY = "stw_choices_raw";
   const SOUND_KEY = "stw_sound";
@@ -78,6 +76,108 @@
   let spinning = false;
   let entries = []; // [{label, weight}]
   let expanded = []; // labels repeated per weight, in wedge order
+
+  /* ---------------- Casino sound engine (Web Audio, no external files) ---------------- */
+  let audioCtx = null;
+  let riserOsc = null;
+  let riserGain = null;
+
+  function getAudioCtx() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      audioCtx = new AC();
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+
+  // Rising pitch "click" as the wheel's pin passes a peg — pitch climbs with progress (0-1)
+  function playTick(progress) {
+    if (!soundOn) return;
+    const actx = getAudioCtx();
+    if (!actx) return;
+    const freq = 260 + progress * 620;
+    const osc = actx.createOscillator();
+    const gain = actx.createGain();
+    osc.type = "square";
+    osc.frequency.value = freq;
+    const t0 = actx.currentTime;
+    gain.gain.setValueAtTime(0.16, t0);
+    gain.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.055);
+    osc.connect(gain).connect(actx.destination);
+    osc.start(t0);
+    osc.stop(t0 + 0.06);
+  }
+
+  // Low suspense drone that swells in pitch and volume for the whole spin — builds anticipation
+  function startRiser(durationSec) {
+    if (!soundOn) return;
+    const actx = getAudioCtx();
+    if (!actx) return;
+    stopRiser();
+    riserOsc = actx.createOscillator();
+    riserGain = actx.createGain();
+    riserOsc.type = "sawtooth";
+    const t0 = actx.currentTime;
+    riserOsc.frequency.setValueAtTime(70, t0);
+    riserOsc.frequency.exponentialRampToValueAtTime(260, t0 + durationSec);
+    riserGain.gain.setValueAtTime(0.0001, t0);
+    riserGain.gain.exponentialRampToValueAtTime(0.045, t0 + durationSec * 0.65);
+    riserGain.gain.exponentialRampToValueAtTime(0.09, t0 + durationSec);
+    const filter = actx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(300, t0);
+    filter.frequency.exponentialRampToValueAtTime(1400, t0 + durationSec);
+    riserOsc.connect(filter).connect(riserGain).connect(actx.destination);
+    riserOsc.start(t0);
+  }
+
+  function stopRiser() {
+    if (!riserOsc || !audioCtx) return;
+    const t0 = audioCtx.currentTime;
+    try {
+      riserGain.gain.cancelScheduledValues(t0);
+      riserGain.gain.setValueAtTime(riserGain.gain.value, t0);
+      riserGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+      riserOsc.stop(t0 + 0.15);
+    } catch (e) {}
+    riserOsc = null;
+    riserGain = null;
+  }
+
+  // Bright ascending arpeggio + "cha-ching" bell — the jackpot payoff
+  function playWinFanfare() {
+    if (!soundOn) return;
+    const actx = getAudioCtx();
+    if (!actx) return;
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5]; // C5 E5 G5 C6 E6
+    notes.forEach((freq, i) => {
+      const osc = actx.createOscillator();
+      const gain = actx.createGain();
+      osc.type = i === notes.length - 1 ? "sine" : "triangle";
+      osc.frequency.value = freq;
+      const t0 = actx.currentTime + i * 0.085;
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.4);
+      osc.connect(gain).connect(actx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.45);
+    });
+    // shimmering bell layer on top for extra "coin" sparkle
+    const bell = actx.createOscillator();
+    const bellGain = actx.createGain();
+    bell.type = "sine";
+    bell.frequency.value = 2093;
+    const tb = actx.currentTime + 0.34;
+    bellGain.gain.setValueAtTime(0.0001, tb);
+    bellGain.gain.exponentialRampToValueAtTime(0.12, tb + 0.02);
+    bellGain.gain.exponentialRampToValueAtTime(0.0005, tb + 0.6);
+    bell.connect(bellGain).connect(actx.destination);
+    bell.start(tb);
+    bell.stop(tb + 0.65);
+  }
 
   /* ---------------- Parsing ---------------- */
   function parseChoices(raw) {
@@ -253,6 +353,8 @@
     const t0 = performance.now();
     let lastWedge = Math.floor((((start % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) / segAngle);
 
+    startRiser(duration / 1000);
+
     function frame(now) {
       const elapsed = now - t0;
       const t = Math.min(elapsed / duration, 1);
@@ -262,10 +364,7 @@
       const wedgeNow = Math.floor((((rotation % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) / segAngle);
       if (wedgeNow !== lastWedge) {
         lastWedge = wedgeNow;
-        if (soundOn && tickSound) {
-          tickSound.currentTime = 0;
-          tickSound.play().catch(() => {});
-        }
+        playTick(t);
       }
 
       drawWheel(rotation);
@@ -276,6 +375,7 @@
         rotation = rotation % (Math.PI * 2);
         spinning = false;
         spinBtn.disabled = false;
+        stopRiser();
         onLanded(winningIndex);
       }
     }
@@ -288,10 +388,7 @@
     winnerTicket.classList.add("show");
     winnerTicket.setAttribute("aria-hidden", "false");
     resultAnnounce.textContent = `The wheel landed on ${label}`;
-    if (soundOn && winSound) {
-      winSound.currentTime = 0;
-      winSound.play().catch(() => {});
-    }
+    playWinFanfare();
     burstConfetti();
     pushHistory(label);
   }

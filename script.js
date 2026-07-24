@@ -97,17 +97,32 @@
     if (!soundOn) return;
     const actx = getAudioCtx();
     if (!actx) return;
-    const freq = 260 + progress * 620;
+    const baseFreq = 520 + progress * 700;
+    const t0 = actx.currentTime;
+
     const osc = actx.createOscillator();
     const gain = actx.createGain();
     osc.type = "square";
-    osc.frequency.value = freq;
-    const t0 = actx.currentTime;
-    gain.gain.setValueAtTime(0.16, t0);
-    gain.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.055);
+    osc.frequency.setValueAtTime(baseFreq, t0);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, t0 + 0.035);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.17, t0 + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.0006, t0 + 0.05);
     osc.connect(gain).connect(actx.destination);
     osc.start(t0);
-    osc.stop(t0 + 0.06);
+    osc.stop(t0 + 0.055);
+
+    // thin high harmonic layered on top for extra sparkle/brightness
+    const sparkle = actx.createOscillator();
+    const sparkleGain = actx.createGain();
+    sparkle.type = "sine";
+    sparkle.frequency.setValueAtTime(baseFreq * 2.5, t0);
+    sparkleGain.gain.setValueAtTime(0.0001, t0);
+    sparkleGain.gain.exponentialRampToValueAtTime(0.05, t0 + 0.004);
+    sparkleGain.gain.exponentialRampToValueAtTime(0.0004, t0 + 0.03);
+    sparkle.connect(sparkleGain).connect(actx.destination);
+    sparkle.start(t0);
+    sparkle.stop(t0 + 0.035);
   }
 
   // Low suspense drone that swells in pitch and volume for the whole spin — builds anticipation
@@ -146,37 +161,75 @@
     riserGain = null;
   }
 
-  // Bright ascending arpeggio + "cha-ching" bell — the jackpot payoff
+  // Big jackpot payoff: low impact thump + wide ascending chord run + cascading coin shimmer
   function playWinFanfare() {
     if (!soundOn) return;
     const actx = getAudioCtx();
     if (!actx) return;
-    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5]; // C5 E5 G5 C6 E6
+    const t0 = actx.currentTime;
+
+    // low thump for weight, right on the landing hit
+    const thump = actx.createOscillator();
+    const thumpGain = actx.createGain();
+    thump.type = "sine";
+    thump.frequency.setValueAtTime(160, t0);
+    thump.frequency.exponentialRampToValueAtTime(50, t0 + 0.2);
+    thumpGain.gain.setValueAtTime(0.3, t0);
+    thumpGain.gain.exponentialRampToValueAtTime(0.0006, t0 + 0.25);
+    thump.connect(thumpGain).connect(actx.destination);
+    thump.start(t0);
+    thump.stop(t0 + 0.26);
+
+    // wide ascending arpeggio, doubled in octaves for a fuller "jackpot" chord run
+    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568.0]; // C5 E5 G5 C6 E6 G6
     notes.forEach((freq, i) => {
+      const t1 = t0 + 0.05 + i * 0.08;
+      [1, 2].forEach((octave) => {
+        const osc = actx.createOscillator();
+        const gain = actx.createGain();
+        osc.type = octave === 1 ? "triangle" : "sine";
+        osc.frequency.value = freq * octave;
+        const peak = octave === 1 ? 0.28 : 0.12;
+        gain.gain.setValueAtTime(0.0001, t1);
+        gain.gain.exponentialRampToValueAtTime(peak, t1 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0008, t1 + 0.45);
+        osc.connect(gain).connect(actx.destination);
+        osc.start(t1);
+        osc.stop(t1 + 0.5);
+      });
+    });
+
+    // final held major chord — the "ta-da" landing
+    const chordTime = t0 + 0.05 + notes.length * 0.08 + 0.05;
+    [1046.5, 1318.5, 1568.0, 2093.0].forEach((freq) => {
       const osc = actx.createOscillator();
       const gain = actx.createGain();
-      osc.type = i === notes.length - 1 ? "sine" : "triangle";
+      osc.type = "triangle";
       osc.frequency.value = freq;
-      const t0 = actx.currentTime + i * 0.085;
-      gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(0.22, t0 + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.4);
+      gain.gain.setValueAtTime(0.0001, chordTime);
+      gain.gain.exponentialRampToValueAtTime(0.2, chordTime + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0006, chordTime + 0.9);
       osc.connect(gain).connect(actx.destination);
-      osc.start(t0);
-      osc.stop(t0 + 0.45);
+      osc.start(chordTime);
+      osc.stop(chordTime + 0.95);
     });
-    // shimmering bell layer on top for extra "coin" sparkle
-    const bell = actx.createOscillator();
-    const bellGain = actx.createGain();
-    bell.type = "sine";
-    bell.frequency.value = 2093;
-    const tb = actx.currentTime + 0.34;
-    bellGain.gain.setValueAtTime(0.0001, tb);
-    bellGain.gain.exponentialRampToValueAtTime(0.12, tb + 0.02);
-    bellGain.gain.exponentialRampToValueAtTime(0.0005, tb + 0.6);
-    bell.connect(bellGain).connect(actx.destination);
-    bell.start(tb);
-    bell.stop(tb + 0.65);
+
+    // cascading coin-drop shimmer trailing after the chord
+    const coinStart = chordTime + 0.15;
+    const coinFreqs = [2093, 2349, 2637, 2793, 3136, 2489, 2794, 3520];
+    coinFreqs.forEach((freq, i) => {
+      const t2 = coinStart + i * (0.09 + Math.random() * 0.05);
+      const osc = actx.createOscillator();
+      const gain = actx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t2);
+      gain.gain.exponentialRampToValueAtTime(0.14, t2 + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0005, t2 + 0.35);
+      osc.connect(gain).connect(actx.destination);
+      osc.start(t2);
+      osc.stop(t2 + 0.4);
+    });
   }
 
   /* ---------------- Parsing ---------------- */

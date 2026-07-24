@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="paper">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Games — Spin the Wheel Decision Maker</title>
+<meta name="description" content="Three quick, free arcade games to play while you wait for the wheel: Ticket Grab, Wedge Dodge, and Whack the Prize.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="wrap">
+    <a href="index.html" class="brand"><span class="brand-mark" aria-hidden="true"></span>Spin the Wheel</a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="blog.html">Blog</a></li>
+      <li><a href="games.html" aria-current="page">Games</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="privacy.html">Privacy</a></li>
+    </ul>
+    <div class="theme-switch" role="group" aria-label="Theme">
+      <button type="button" data-theme-btn="paper" aria-pressed="true" title="Paper (light)">☀️</button>
+      <button type="button" data-theme-btn="midnight" aria-pressed="false" title="Midnight (dark)">🌙</button>
+      <button type="button" data-theme-btn="neon" aria-pressed="false" title="Neon (arcade)">⚡</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <section class="games-intro">
+    <div class="wrap">
+      <div class="hero-head">
+        <p class="eyebrow">While the wheel isn't the only game in town</p>
+        <h1>Three quick <span>arcade</span> games</h1>
+        <p>Fast, free, and a little bit tense. Pick one below — keyboard controls for two of them, mouse for the third.</p>
+      </div>
+
+      <div class="games-tabs" role="tablist" aria-label="Choose a game">
+        <button class="games-tab" role="tab" aria-selected="true" data-game="snake">🎟️ Ticket Grab</button>
+        <button class="games-tab" role="tab" aria-selected="false" data-game="dodge">🎡 Wedge Dodge</button>
+        <button class="games-tab" role="tab" aria-selected="false" data-game="whack">🎯 Whack the Prize</button>
+      </div>
+
+      <!-- TICKET GRAB (snake) -->
+      <div class="game-panel active" id="panel-snake">
+        <div class="game-layout">
+          <div class="game-stage">
+            <div class="game-hud">
+              <div class="stat"><span class="n" id="snakeScore">0</span><span class="l">Score</span></div>
+              <div class="stat"><span class="n" id="snakeSpeed">1×</span><span class="l">Speed</span></div>
+            </div>
+            <div class="game-canvas-wrap">
+              <canvas id="snakeCanvas" width="440" height="440"></canvas>
+              <div class="game-overlay" id="snakeOverlay">
+                <h3>Ticket Grab</h3>
+                <p>Use the arrow keys or WASD. Grab tickets, don't hit the wall or yourself.</p>
+                <button type="button" class="spin-btn" id="snakeStart" style="margin-top:6px;">START</button>
+              </div>
+            </div>
+          </div>
+          <aside class="game-side">
+            <h3>How to play</h3>
+            <ul>
+              <li>Arrow keys or WASD to steer</li>
+              <li>Grab a ticket to grow and score</li>
+              <li>Speed climbs the longer you survive</li>
+              <li>Hitting a wall or yourself ends the run</li>
+            </ul>
+            <div class="high">Best score <b id="snakeHigh">0</b></div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- WEDGE DODGE -->
+      <div class="game-panel" id="panel-dodge">
+        <div class="game-layout">
+          <div class="game-stage">
+            <div class="game-hud">
+              <div class="stat"><span class="n" id="dodgeScore">0</span><span class="l">Seconds</span></div>
+              <div class="stat"><span class="n" id="dodgeSpeed">1×</span><span class="l">Speed</span></div>
+            </div>
+            <div class="game-canvas-wrap tall">
+              <canvas id="dodgeCanvas" width="360" height="480"></canvas>
+              <div class="game-overlay" id="dodgeOverlay">
+                <h3>Wedge Dodge</h3>
+                <p>Left / right arrows (or A / D). Dodge the falling wedges — it speeds up fast.</p>
+                <button type="button" class="spin-btn" id="dodgeStart" style="margin-top:6px;">START</button>
+              </div>
+            </div>
+          </div>
+          <aside class="game-side">
+            <h3>How to play</h3>
+            <ul>
+              <li>Left / right arrows or A / D to move the cart</li>
+              <li>Wedges fall faster and thicker over time</li>
+              <li>Score is how long you survive, in seconds</li>
+              <li>One hit ends the run</li>
+            </ul>
+            <div class="high">Best time <b id="dodgeHigh">0</b>s</div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- WHACK THE PRIZE -->
+      <div class="game-panel" id="panel-whack">
+        <div class="game-layout">
+          <div class="game-stage">
+            <div class="game-hud">
+              <div class="stat"><span class="n" id="whackScore">0</span><span class="l">Score</span></div>
+              <div class="stat"><span class="n" id="whackTime">30</span><span class="l">Seconds</span></div>
+            </div>
+            <div class="game-canvas-wrap">
+              <canvas id="whackCanvas" width="440" height="440"></canvas>
+              <div class="game-overlay" id="whackOverlay">
+                <h3>Whack the Prize</h3>
+                <p>Click the prize before it disappears. 30 seconds, and it only gets faster.</p>
+                <button type="button" class="spin-btn" id="whackStart" style="margin-top:6px;">START</button>
+              </div>
+            </div>
+          </div>
+          <aside class="game-side">
+            <h3>How to play</h3>
+            <ul>
+              <li>Click the prize circle as soon as it appears</li>
+              <li>Each hit shrinks the window a little more</li>
+              <li>30 seconds on the clock, no penalty for a miss</li>
+              <li>Chase your best score before time runs out</li>
+            </ul>
+            <div class="high">Best score <b id="whackHigh">0</b></div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-row">
+    <span>© <span id="year"></span> Spin the Wheel Decision Maker</span>
+    <ul class="footer-links">
+      <li><a href="about.html">About</a></li>
+      <li><a href="blog.html">Blog</a></li>
+      <li><a href="games.html">Games</a></li>
+      <li><a href="privacy.html">Privacy Policy</a></li>
+    </ul>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+<script src="script.js"></script>
+<script src="games.js"></script>
+</body>
+</html>

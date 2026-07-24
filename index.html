@@ -1,406 +1,171 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="paper">
 <head>
-<script src="https://cmp.gatekeeperconsent.com/min.js" data-cfasync="false"></script>
-<script src="https://the.gatekeeperconsent.com/cmp.min.js" data-cfasync="false"></script>
-
-<script defer src="https://cdn.ezoic.com/ezoic.js?spinthewheeldecisionmaker.com"></script>
-<script async src="//www.ezojs.com/ezoic/sa.min.js"></script>
-<script>
-    window.ezstandalone = window.ezstandalone || {};
-    ezstandalone.cmd = ezstandalone.cmd || [];
-</script>
-
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-8TXL6PZV89"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-8TXL6PZV89');
-</script>
-
-<meta name="google-site-verification" content="cbdJzuJFQrB48XiIqhqYJy8xaSqoBV9jChDa2drMiqg" />
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="description" content="An interactive spin-the-wheel web app for quick decisions, built with HTML, CSS, and JavaScript." />
-<meta name="keywords" content="decision app, spin wheel, randomizer, JavaScript game, make decisions quickly" />
-<meta name="author" content="Joe Kamau" />
-<meta name="robots" content="index, follow" />
-
-<title>Spin the Wheel</title>
-
-<!-- Social Meta Tags -->
-<meta property="og:url" content="https://www.spinthewheeldecisionmaker.com">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spin the Wheel — Decision Maker</title>
+<meta name="description" content="Type in your options and let the wheel decide. A fast, free spin-the-wheel picker for food, games, chores, and any decision you're stuck on.">
+<meta name="keywords" content="decision app, spin wheel, randomizer, wheel picker, make decisions quickly">
+<meta property="og:title" content="Spin the Wheel — Decision Maker">
+<meta property="og:description" content="Type in your options and let the wheel decide.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Spin the Wheel">
-<meta property="og:description" content="Make choices fun and easy with this interactive spinning wheel web app.">
-<meta property="og:image" content="https://opengraph.b-cdn.net/production/images/c6eeecf0-3e8a-4e0e-819f-69478aa86cc3.png?token=lHsxl_QBZJCy8erDxdK-LjBbHt7pY8lnI1KbvmCB_0U&height=675&width=1200&expires=33286926343">
-
+<meta property="og:url" content="https://www.spinthewheeldecisionmaker.com">
 <meta name="twitter:card" content="summary_large_image">
-<meta property="twitter:domain" content="spinthewheeldecisionmaker.com">
-<meta property="twitter:url" content="https://www.spinthewheeldecisionmaker.com">
-<meta name="twitter:title" content="Spin the Wheel">
-<meta name="twitter:description" content="Make choices fun and easy with this interactive spinning wheel web app.">
-<meta name="twitter:image" content="https://opengraph.b-cdn.net/production/images/c6eeecf0-3e8a-4e0e-819f-69478aa86cc3.png?token=lHsxl_QBZJCy8erDxdK-LjBbHt7pY8lnI1KbvmCB_0U&height=675&width=1200&expires=33286926343">
-
-<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-<link rel="manifest" href="/site.webmanifest">
-
-<style>
-  :root {
-    --bg: linear-gradient(to bottom right, #e0f7fa, #80deea);
-    --text-color: #000;
-    --accent: #00796b;
-  }
-
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100vh;
-    overflow: hidden;
-    font-family: 'Segoe UI', sans-serif;
-    background: var(--bg);
-    color: var(--text-color);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    text-align: center;
-    padding-top: 60px; /* space for navbar */
-  }
-
-  /* Top Navigation Bar */
-  #top-nav {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(6px);
-    border-bottom: 1px solid #ccc;
-    padding: 0.5rem 1rem;
-    box-sizing: border-box;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1000;
-  }
-
-  #top-nav a {
-    text-decoration: none;
-    font-size: 1rem;
-    color: #00796b;
-    font-weight: 600;
-    margin-left: 1rem;
-  }
-
-  #top-nav a:hover {
-    color: #004d40;
-  }
-
-  .site-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #004d40;
-  }
-
-  h1 {
-    font-size: 1.3rem;
-    margin: 0.5rem 0 0.25rem;
-  }
-
-  p {
-    font-size: 0.9rem;
-    margin: 0.25rem 0;
-    padding: 0 1rem;
-  }
-
-  #optionsForm {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 0.5rem;
-    width: 100%;
-  }
-
-  #optionsInput {
-    width: 90%;
-    max-width: 400px;
-    padding: 0.5rem;
-    font-size: 1rem;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-  }
-
-  #optionsForm button {
-    padding: 0.5rem 1rem;
-    font-size: 1rem;
-    margin-top: 0.5rem;
-  }
-
-  #themeSelector {
-    font-size: 1rem;
-    margin: 0.5rem 0;
-  }
-
-  #wheel-wrapper {
-    position: relative;
-    width: min(90vw, 400px);
-    height: min(90vw, 400px);
-    margin-top: 0.5rem;
-    flex-shrink: 0;
-  }
-
-  canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-
-  #pointer {
-    position: absolute;
-    top: -18px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 0;
-    border-left: 15px solid transparent;
-    border-right: 15px solid transparent;
-    border-top: 30px solid #d32f2f;
-    z-index: 10;
-  }
-
-  #spin {
-    padding: 0.6rem 1.4rem;
-    font-size: 1.1rem;
-    background-color: var(--accent);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    margin: 0.5rem 0;
-  }
-
-  #spin:hover {
-    background-color: #004d40;
-  }
-
-  #result {
-    font-size: 1rem;
-    font-weight: bold;
-    color: #00695c;
-    margin: 0.3rem;
-  }
-
-  #history {
-    font-size: 0.8rem;
-    padding: 0 1rem;
-    word-wrap: break-word;
-  }
-
-  #downloadImage {
-    font-size: 0.9rem;
-    padding: 0.4rem 1rem;
-    margin-bottom: 0.5rem;
-  }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-<!-- 🌐 TOP NAVIGATION BAR -->
-<header id="top-nav">
-  <div class="nav-left">
-    <a href="index.html" class="site-title">Spin The Wheel</a>
+<nav class="site-nav">
+  <div class="wrap">
+    <a href="index.html" class="brand"><span class="brand-mark" aria-hidden="true"></span>Spin the Wheel</a>
+    <ul class="nav-links">
+      <li><a href="index.html" aria-current="page">Home</a></li>
+      <li><a href="blog.html">Blog</a></li>
+      <li><a href="games.html">Games</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="privacy.html">Privacy</a></li>
+    </ul>
+    <div class="theme-switch" role="group" aria-label="Theme">
+      <button type="button" data-theme-btn="paper" aria-pressed="true" title="Paper (light)">☀️</button>
+      <button type="button" data-theme-btn="midnight" aria-pressed="false" title="Midnight (dark)">🌙</button>
+      <button type="button" data-theme-btn="neon" aria-pressed="false" title="Neon (arcade)">⚡</button>
+    </div>
   </div>
-  <nav class="nav-right">
-    <a href="index.html">Home</a>
-    <a href="blog.html">Blog</a>
-    <a href="about.html">About</a>
-    <a href="privacy.html">Privacy Policy</a>
-  </nav>
-</header>
+</nav>
 
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-head">
+        <p class="eyebrow">Pull the lever · Trust the wheel</p>
+        <h1>Can't decide? <span>Spin it.</span></h1>
+        <p>Type in your options, give the wheel a spin, and let it settle the argument — dinner, movie night, chores, whatever's stuck in the group chat.</p>
+      </div>
 
-<!-- MAIN CONTENT -->
-<h1>🎯 Spin the Wheel - Decision Maker </h1>
-<p>Enter choices separated by commas:</p>
+      <div class="hero-grid">
+        <!-- WHEEL -->
+        <div class="wheel-stage">
+          <div class="wheel-frame">
+            <div class="wheel-pin" aria-hidden="true"></div>
+            <canvas id="wheelCanvas" width="600" height="600" role="img" aria-label="Decision wheel"></canvas>
+            <div class="wheel-hub" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="6"/></svg>
+            </div>
+          </div>
 
-<form id="optionsForm">
-  <input type="text" id="optionsInput" placeholder="e.g. 🍕, 🍔, 🍣" required />
-  <button type="submit">Update</button>
-</form>
+          <button type="button" id="spinBtn" class="spin-btn">SPIN</button>
 
-<select id="themeSelector">
-  <option value="light">Light</option>
-  <option value="dark">Dark</option>
-  <option value="neon">Neon</option>
-</select>
+          <div id="winnerTicket" class="winner-ticket" aria-hidden="true">
+            <div class="label">The wheel says</div>
+            <div class="pick" id="winnerText">—</div>
+          </div>
 
-<div id="wheel-wrapper">
-  <canvas id="wheel" width="400" height="400"></canvas>
-  <div id="pointer"></div>
-</div>
+          <p id="resultAnnounce" class="result-announce" aria-live="polite"></p>
+        </div>
 
-<button id="spin">SPIN</button>
-<div id="result"></div>
-<div id="history"></div>
-<button id="downloadImage">📷 Save Image</button>
+        <!-- CONTROLS -->
+        <div class="ticket">
+          <h2>Load the wheel</h2>
+          <p class="sub">One option per comma. Add <code>x2</code>, <code>x3</code> after an option to give it better odds.</p>
 
-<!-- ADS -->
-<div id="ezoic-pub-ad-placeholder-107"></div>
-<script>ezstandalone.cmd.push(function(){ ezstandalone.showAds(107); });</script>
+          <div class="field">
+            <label for="choicesInput">Your options</label>
+            <textarea id="choicesInput" placeholder="Pizza, Tacos x2, Sushi, Ramen"></textarea>
+          </div>
 
-<div id="ezoic-pub-ad-placeholder-108"></div>
-<script>ezstandalone.cmd.push(function(){ ezstandalone.showAds(108); });</script>
+          <ul class="chip-list" id="chipList" aria-label="Current options"></ul>
 
-<div id="ezoic-pub-ad-placeholder-111"></div>
-<script>ezstandalone.cmd.push(function(){ ezstandalone.showAds(111); });</script>
+          <div class="stub-divider"></div>
 
-<div id="ezoic-pub-ad-placeholder-114"></div>
-<script>ezstandalone.cmd.push(function(){ ezstandalone.showAds(114); });</script>
+          <div class="ticket-actions">
+            <button type="button" class="btn-secondary" id="soundToggle" aria-pressed="true">
+              <span class="icon-on">🔊</span><span class="icon-off">🔇</span> Sound
+            </button>
+            <button type="button" class="btn-secondary" id="shareBtn">🔗 Copy share link</button>
+            <button type="button" class="btn-secondary" id="saveImgBtn">📷 Save image</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<audio id="tickSound" src="https://freesound.org/data/previews/341/341695_6266601-lq.mp3"></audio>
-<audio id="winSound" src="https://freesound.org/data/previews/320/320655_5260877-lq.mp3"></audio>
+  <section class="presets">
+    <div class="wrap">
+      <p class="eyebrow" style="margin-bottom:10px;">Quick start</p>
+      <div class="presets-row" id="presetsRow"></div>
+    </div>
+  </section>
 
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <section class="history">
+    <div class="wrap">
+      <p class="eyebrow" style="margin-bottom:10px;">Recent spins</p>
+      <div class="history-row" id="historyRow">
+        <span class="history-empty">Nothing yet — give it a spin.</span>
+      </div>
+    </div>
+  </section>
 
-<script>
-  const canvas = document.getElementById("wheel");
-  const ctx = canvas.getContext("2d");
-  const spinBtn = document.getElementById("spin");
-  const resultDiv = document.getElementById("result");
-  const optionsInput = document.getElementById("optionsInput");
-  const pointer = document.getElementById("pointer");
-  const historyDiv = document.getElementById("history");
-  const tickSound = document.getElementById("tickSound");
-  const winSound = document.getElementById("winSound");
-  const themeSelector = document.getElementById("themeSelector");
+  <section class="how">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <div class="how-grid">
+        <div class="how-card">
+          <div class="num">01</div>
+          <h3>Load your options</h3>
+          <p>Type choices separated by commas, or tap a quick-start preset to fill the wheel instantly.</p>
+        </div>
+        <div class="how-card">
+          <div class="num">02</div>
+          <h3>Give it a spin</h3>
+          <p>Hit SPIN. The wheel accelerates, coasts, and settles under the pin — no rigging, pure random.</p>
+        </div>
+        <div class="how-card">
+          <div class="num">03</div>
+          <h3>Take the result</h3>
+          <p>Your pick pops up on a ticket, gets logged to your recent spins, and you're free to argue about it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-  let options = ["✅ Yes", "❌ No", "🤔 Maybe"];
-  let startAngle = Math.random() * Math.PI * 2;
-  let arc = Math.PI * 2 / options.length;
-  let spinAngle = 0;
-  let spinning = false;
-  let history = [];
+  <section class="teaser">
+    <div class="wrap">
+      <p class="eyebrow" style="margin-bottom:10px;">From the blog</p>
+      <div class="teaser-grid">
+        <a class="teaser-card" href="blog.html">
+          <span class="tag">Guide</span>
+          <h3>How to make a hard decision when everyone disagrees</h3>
+        </a>
+        <a class="teaser-card" href="blog.html">
+          <span class="tag">Use case</span>
+          <h3>The best random name picker for classrooms and teams</h3>
+        </a>
+        <a class="teaser-card" href="blog.html">
+          <span class="tag">Fun</span>
+          <h3>20 spin-the-wheel games for your next game night</h3>
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
 
-  function drawWheel() {
-    const radius = canvas.width / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    arc = Math.PI * 2 / options.length;
+<footer>
+  <div class="wrap footer-row">
+    <span>© <span id="year"></span> Spin the Wheel Decision Maker</span>
+    <ul class="footer-links">
+      <li><a href="about.html">About</a></li>
+      <li><a href="blog.html">Blog</a></li>
+      <li><a href="games.html">Games</a></li>
+      <li><a href="privacy.html">Privacy Policy</a></li>
+    </ul>
+  </div>
+</footer>
 
-    for (let i = 0; i < options.length; i++) {
-      const angle = startAngle + i * arc;
-      ctx.beginPath();
-      ctx.fillStyle = `hsl(${i * 360 / options.length}, 80%, 70%)`;
-      ctx.moveTo(radius, radius);
-      ctx.arc(radius, radius, radius, angle, angle + arc, false);
-      ctx.lineTo(radius, radius);
-      ctx.fill();
-      ctx.save();
-      ctx.translate(radius, radius);
-      ctx.rotate(angle + arc / 2);
-      ctx.fillStyle = "#000";
-      ctx.font = "14px sans-serif";
-      ctx.textAlign = "right";
-      ctx.fillText(options[i], radius - 10, 10);
-      ctx.restore();
-    }
-  }
+<div class="toast" id="toast"></div>
 
-  function spinWheel() {
-    if (spinning) return;
-    spinning = true;
-    let spinTime = 0;
-    const spinDuration = 3000 + Math.floor(Math.random() * 1000);
-    const initialSpeed = 0.4 + Math.random() * 0.2;
-    let lastSegment = -1;
+<audio id="tickSound" src="https://freesound.org/data/previews/341/341695_6266601-lq.mp3" preload="auto"></audio>
+<audio id="winSound" src="https://freesound.org/data/previews/320/320655_5260877-lq.mp3" preload="auto"></audio>
 
-    function rotate() {
-      spinTime += 30;
-      const ease = 1 - Math.pow(spinTime / spinDuration, 3);
-      const angleStep = initialSpeed * ease;
-      spinAngle += angleStep;
-      startAngle += angleStep;
-      drawWheel();
-
-      const currentSegment = Math.floor(startAngle / arc);
-      if (currentSegment !== lastSegment) {
-        tickSound.currentTime = 0;
-        tickSound.play();
-        lastSegment = currentSegment;
-      }
-
-      if (spinTime < spinDuration) {
-        requestAnimationFrame(rotate);
-      } else {
-        spinning = false;
-        displayResult();
-      }
-    }
-
-    rotate();
-  }
-
-  function displayResult() {
-    const degrees = startAngle * 180 / Math.PI + 90;
-    const index = Math.floor((360 - degrees % 360) / (360 / options.length)) % options.length;
-    const result = options[index];
-    resultDiv.textContent = "Result: " + result;
-
-    winSound.currentTime = 0;
-    winSound.play();
-
-    confetti({ particleCount: 150, spread: 70, origin: { y: 0.2 } });
-
-    history.unshift(result);
-    if (history.length > 3) history.pop();
-    historyDiv.innerHTML = '<strong>History:</strong><br>' + history.join(", ");
-  }
-
-  document.getElementById("optionsForm").addEventListener("submit", e => {
-    e.preventDefault();
-    const input = optionsInput.value.trim();
-    if (input) {
-      options = input.split(",").map(opt => opt.trim()).filter(Boolean);
-      startAngle = 0;
-      drawWheel();
-      resultDiv.textContent = "";
-      history = [];
-      historyDiv.textContent = "";
-    }
-  });
-
-  themeSelector.addEventListener("change", () => {
-    const theme = themeSelector.value;
-    if (theme === "dark") {
-      document.body.style.background = "linear-gradient(to bottom right, #2c3e50, #34495e)";
-      document.body.style.color = "#fff";
-    } else if (theme === "neon") {
-      document.body.style.background = "linear-gradient(to bottom right, #1a1a1a, #0f0)";
-      document.body.style.color = "#0f0";
-    } else {
-      document.body.style.background = "linear-gradient(to bottom right, #e0f7fa, #80deea)";
-      document.body.style.color = "#000";
-    }
-    drawWheel();
-  });
-
-  document.getElementById("downloadImage").addEventListener("click", () => {
-    const image = canvas.toDataURL("image/png");
-    const link = document.createElement("a");
-    link.href = image;
-    link.download = "wheel.png";
-    link.click();
-  });
-
-  spinBtn.addEventListener("click", spinWheel);
-  drawWheel();
-</script>
-
+<script src="script.js"></script>
 </body>
 </html>
-

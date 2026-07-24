@@ -1,96 +1,60 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="paper">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>About – Spin The Wheel</title>
-
-<style>
-  body {
-    font-family: 'Segoe UI', sans-serif;
-    margin: 0;
-    padding: 80px 20px;
-    background: linear-gradient(to bottom right, #e0f7fa, #80deea);
-    color: #000;
-  }
-
-  /* Navigation (same as index) */
-  #top-nav {
-    width: 100%;
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(6px);
-    border-bottom: 1px solid #ccc;
-    padding: 0.5rem 1rem;
-    box-sizing: border-box;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1000;
-  }
-
-  #top-nav a {
-    text-decoration: none;
-    font-size: 1rem;
-    color: #00796b;
-    font-weight: 600;
-    margin-left: 1rem;
-  }
-
-  #top-nav a:hover {
-    color: #004d40;
-  }
-
-  .site-title {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: #004d40;
-  }
-
-  .about-container {
-    max-width: 850px;
-    margin: auto;
-    background: white;
-    padding: 25px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  }
-</style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — Spin the Wheel Decision Maker</title>
+<meta name="description" content="Why we built a free, fast spin-the-wheel decision maker — and how it works.">
+<link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-<header id="top-nav">
-  <div class="nav-left">
-    <a href="index.html" class="site-title">Spin The Wheel</a>
+<nav class="site-nav">
+  <div class="wrap">
+    <a href="index.html" class="brand"><span class="brand-mark" aria-hidden="true"></span>Spin the Wheel</a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="blog.html">Blog</a></li>
+      <li><a href="games.html">Games</a></li>
+      <li><a href="about.html" aria-current="page">About</a></li>
+      <li><a href="privacy.html">Privacy</a></li>
+    </ul>
+    <div class="theme-switch" role="group" aria-label="Theme">
+      <button type="button" data-theme-btn="paper" aria-pressed="true" title="Paper (light)">☀️</button>
+      <button type="button" data-theme-btn="midnight" aria-pressed="false" title="Midnight (dark)">🌙</button>
+      <button type="button" data-theme-btn="neon" aria-pressed="false" title="Neon (arcade)">⚡</button>
+    </div>
   </div>
-  <nav class="nav-right">
-    <a href="index.html">Home</a>
-    <a href="blog.html">Blog</a>
-    <a href="about.html">About</a>
-    <a href="privacy.html">Privacy Policy</a>
-  </nav>
-</header>
+</nav>
 
+<main class="page wrap">
+  <p class="eyebrow">About</p>
+  <h1>A wheel for when nobody can agree</h1>
+  <p>Spin the Wheel Decision Maker started as a small tool for one very specific argument: where to eat. It's grown into a general-purpose picker people use for game nights, classroom raffles, chore rotations, and anything else that benefits from a fair, random call.</p>
 
-<div class="about-container">
-  <h1>About Spin The Wheel</h1>
+  <h2>What it does</h2>
+  <p>Type in your options, hit spin, and the wheel picks one at random. No accounts, no ads blocking the wheel, no tracking beyond what's needed to remember your last set of choices on your own device.</p>
 
-  <p>Spin The Wheel was created to make choosing easier — and fun. Whether it’s food, games, chores, or anything else, spinning removes stress.</p>
+  <h2>Why it's fair</h2>
+  <p>Every spin uses your browser's random number generator to choose a wedge, then animates the wheel to land on it. Options with an <code>x2</code> or <code>x3</code> suffix simply get extra wedges, so their odds scale exactly the way you'd expect.</p>
 
-  <p>The site is lightweight, fast, and mobile-friendly so everyone can use it without delays or distractions.</p>
+  <h2>Who builds it</h2>
+  <p>This site is maintained independently and updated based on how people actually use it. If something's confusing or broken, that's useful to know — see the blog for updates and the privacy page for how your data is handled.</p>
+</main>
 
-  <h2>Why It Exists</h2>
-  <ul>
-    <li>To remove decision fatigue</li>
-    <li>To add a little fun to everyday life</li>
-    <li>Because spinning things is satisfying</li>
-  </ul>
+<footer>
+  <div class="wrap footer-row">
+    <span>© <span id="year"></span> Spin the Wheel Decision Maker</span>
+    <ul class="footer-links">
+      <li><a href="about.html">About</a></li>
+      <li><a href="blog.html">Blog</a></li>
+      <li><a href="games.html">Games</a></li>
+      <li><a href="privacy.html">Privacy Policy</a></li>
+    </ul>
+  </div>
+</footer>
 
-  <p>If you have ideas or features you'd like added, feel free to reach out!</p>
-</div>
-
+<div class="toast" id="toast"></div>
+<script src="script.js"></script>
 </body>
 </html>

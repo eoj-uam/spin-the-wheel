@@ -40,6 +40,8 @@
         <button class="games-tab" role="tab" aria-selected="true" data-game="snake">🎟️ Ticket Grab</button>
         <button class="games-tab" role="tab" aria-selected="false" data-game="dodge">🎡 Wedge Dodge</button>
         <button class="games-tab" role="tab" aria-selected="false" data-game="whack">🎯 Whack the Prize</button>
+        <button class="games-tab" role="tab" aria-selected="false" data-game="pacman">👻 Ticket Muncher</button>
+        <button class="games-tab" role="tab" aria-selected="false" data-game="flyer">🎈 Balloon Rise</button>
       </div>
 
       <!-- TICKET GRAB (snake) -->
@@ -140,6 +142,72 @@
               <li>Chase your best score before time runs out</li>
             </ul>
             <div class="high">Best score <b id="whackHigh">0</b></div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- TICKET MUNCHER (pac-man style) -->
+      <div class="game-panel" id="panel-pacman">
+        <div class="game-layout">
+          <div class="game-stage">
+            <div class="game-hud">
+              <div class="stat"><span class="n" id="pacmanScore">0</span><span class="l">Tickets</span></div>
+              <div class="stat"><span class="n" id="pacmanLives">3</span><span class="l">Lives</span></div>
+            </div>
+            <div class="game-canvas-wrap">
+              <canvas id="pacmanCanvas" width="442" height="442"></canvas>
+              <div class="game-overlay" id="pacmanOverlay">
+                <h3>Ticket Muncher</h3>
+                <p>Arrow keys or WASD. Eat every ticket in the maze — the inspectors are not friendly.</p>
+                <button type="button" class="spin-btn" id="pacmanStart" style="margin-top:6px;">START</button>
+              </div>
+            </div>
+            <div class="touch-dpad" id="pacmanDpad" aria-hidden="true">
+              <button type="button" class="up" data-dir="up">▲</button>
+              <button type="button" class="left" data-dir="left">◀</button>
+              <button type="button" class="right" data-dir="right">▶</button>
+              <button type="button" class="down" data-dir="down">▼</button>
+            </div>
+          </div>
+          <aside class="game-side">
+            <h3>How to play</h3>
+            <ul>
+              <li>Arrow keys or WASD to move through the maze</li>
+              <li>On touch devices: swipe on the board or use the on-screen arrows</li>
+              <li>Eat every ticket to win — the inspectors get faster as the maze empties</li>
+              <li>Getting caught costs a life; three lives and you're out</li>
+            </ul>
+            <div class="high">Best score <b id="pacmanHigh">0</b></div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- BALLOON RISE (tap-to-rise) -->
+      <div class="game-panel" id="panel-flyer">
+        <div class="game-layout">
+          <div class="game-stage">
+            <div class="game-hud">
+              <div class="stat"><span class="n" id="flyerScore">0</span><span class="l">Passed</span></div>
+              <div class="stat"><span class="n" id="flyerSpeed">1×</span><span class="l">Speed</span></div>
+            </div>
+            <div class="game-canvas-wrap tall">
+              <canvas id="flyerCanvas" width="360" height="480"></canvas>
+              <div class="game-overlay" id="flyerOverlay">
+                <h3>Balloon Rise</h3>
+                <p>Tap, click, or press space to rise. Thread the gaps between the poles — don't clip one.</p>
+                <button type="button" class="spin-btn" id="flyerStart" style="margin-top:6px;">START</button>
+              </div>
+            </div>
+          </div>
+          <aside class="game-side">
+            <h3>How to play</h3>
+            <ul>
+              <li>Tap or click anywhere on the board to rise</li>
+              <li>Spacebar works too, if you're on a keyboard</li>
+              <li>Gravity pulls you down between taps</li>
+              <li>It speeds up the longer you last</li>
+            </ul>
+            <div class="high">Best score <b id="flyerHigh">0</b></div>
           </aside>
         </div>
       </div>

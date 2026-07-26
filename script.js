@@ -79,8 +79,7 @@
 
   /* ---------------- Casino sound engine (Web Audio, no external files) ---------------- */
   let audioCtx = null;
-  let riserOsc = null;
-  let riserGain = null;
+  let noiseBuffer = null;
 
   function getAudioCtx() {
     if (!audioCtx) {
@@ -92,144 +91,124 @@
     return audioCtx;
   }
 
-  // Rising pitch "click" as the wheel's pin passes a peg — pitch climbs with progress (0-1)
+  // A shared 1-second white noise buffer, reused and sliced for every noise-based hit
+  function getNoiseBuffer(actx) {
+    if (noiseBuffer) return noiseBuffer;
+    const len = actx.sampleRate * 1;
+    noiseBuffer = actx.createBuffer(1, len, actx.sampleRate);
+    const data = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+    return noiseBuffer;
+  }
+
+  // Physical mechanical "clack" — the wheel's pin flicking past a wooden peg.
+  // Filtered noise, not a tone, so it sounds like an object, not a synth blip.
   function playTick(progress) {
     if (!soundOn) return;
     const actx = getAudioCtx();
     if (!actx) return;
-    const baseFreq = 520 + progress * 700;
     const t0 = actx.currentTime;
 
-    const osc = actx.createOscillator();
+    const noise = actx.createBufferSource();
+    noise.buffer = getNoiseBuffer(actx);
+
+    const bandpass = actx.createBiquadFilter();
+    bandpass.type = "bandpass";
+    bandpass.frequency.value = 1400 + progress * 2600;
+    bandpass.Q.value = 8;
+
+    const highpass = actx.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 900;
+
     const gain = actx.createGain();
-    osc.type = "square";
-    osc.frequency.setValueAtTime(baseFreq, t0);
-    osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.5, t0 + 0.035);
-    gain.gain.setValueAtTime(0.0001, t0);
-    gain.gain.exponentialRampToValueAtTime(0.17, t0 + 0.006);
-    gain.gain.exponentialRampToValueAtTime(0.0006, t0 + 0.05);
-    osc.connect(gain).connect(actx.destination);
-    osc.start(t0);
-    osc.stop(t0 + 0.055);
+    gain.gain.setValueAtTime(0.9, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.035);
 
-    // thin high harmonic layered on top for extra sparkle/brightness
-    const sparkle = actx.createOscillator();
-    const sparkleGain = actx.createGain();
-    sparkle.type = "sine";
-    sparkle.frequency.setValueAtTime(baseFreq * 2.5, t0);
-    sparkleGain.gain.setValueAtTime(0.0001, t0);
-    sparkleGain.gain.exponentialRampToValueAtTime(0.05, t0 + 0.004);
-    sparkleGain.gain.exponentialRampToValueAtTime(0.0004, t0 + 0.03);
-    sparkle.connect(sparkleGain).connect(actx.destination);
-    sparkle.start(t0);
-    sparkle.stop(t0 + 0.035);
+    noise.connect(bandpass).connect(highpass).connect(gain).connect(actx.destination);
+    noise.start(t0);
+    noise.stop(t0 + 0.04);
+
+    // a soft low knock underneath, giving the click some body
+    const knock = actx.createOscillator();
+    const knockGain = actx.createGain();
+    knock.type = "sine";
+    knock.frequency.setValueAtTime(180, t0);
+    knock.frequency.exponentialRampToValueAtTime(90, t0 + 0.03);
+    knockGain.gain.setValueAtTime(0.12, t0);
+    knockGain.gain.exponentialRampToValueAtTime(0.0006, t0 + 0.04);
+    knock.connect(knockGain).connect(actx.destination);
+    knock.start(t0);
+    knock.stop(t0 + 0.045);
   }
 
-  // Low suspense drone that swells in pitch and volume for the whole spin — builds anticipation
-  function startRiser(durationSec) {
-    if (!soundOn) return;
-    const actx = getAudioCtx();
-    if (!actx) return;
-    stopRiser();
-    riserOsc = actx.createOscillator();
-    riserGain = actx.createGain();
-    riserOsc.type = "sawtooth";
-    const t0 = actx.currentTime;
-    riserOsc.frequency.setValueAtTime(70, t0);
-    riserOsc.frequency.exponentialRampToValueAtTime(260, t0 + durationSec);
-    riserGain.gain.setValueAtTime(0.0001, t0);
-    riserGain.gain.exponentialRampToValueAtTime(0.045, t0 + durationSec * 0.65);
-    riserGain.gain.exponentialRampToValueAtTime(0.09, t0 + durationSec);
-    const filter = actx.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.setValueAtTime(300, t0);
-    filter.frequency.exponentialRampToValueAtTime(1400, t0 + durationSec);
-    riserOsc.connect(filter).connect(riserGain).connect(actx.destination);
-    riserOsc.start(t0);
+  // One strike of a real bell/coin: a fundamental plus inharmonic partials (not integer
+  // multiples), each ringing out at a different rate — this is what makes it sound
+  // metallic rather than musical.
+  function strikeBell(actx, time, freq, peakGain) {
+    const partials = [
+      { ratio: 1, amp: 1, decay: 0.85 },
+      { ratio: 2.4, amp: 0.55, decay: 0.6 },
+      { ratio: 3.9, amp: 0.32, decay: 0.42 },
+      { ratio: 5.6, amp: 0.2, decay: 0.3 },
+      { ratio: 7.8, amp: 0.12, decay: 0.2 },
+    ];
+    partials.forEach((p) => {
+      const osc = actx.createOscillator();
+      const gain = actx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq * p.ratio;
+      gain.gain.setValueAtTime(0.0001, time);
+      gain.gain.exponentialRampToValueAtTime(peakGain * p.amp, time + 0.006);
+      gain.gain.exponentialRampToValueAtTime(0.0004, time + p.decay);
+      osc.connect(gain).connect(actx.destination);
+      osc.start(time);
+      osc.stop(time + p.decay + 0.05);
+    });
   }
 
-  function stopRiser() {
-    if (!riserOsc || !audioCtx) return;
-    const t0 = audioCtx.currentTime;
-    try {
-      riserGain.gain.cancelScheduledValues(t0);
-      riserGain.gain.setValueAtTime(riserGain.gain.value, t0);
-      riserGain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
-      riserOsc.stop(t0 + 0.15);
-    } catch (e) {}
-    riserOsc = null;
-    riserGain = null;
-  }
-
-  // Big jackpot payoff: low impact thump + wide ascending chord run + cascading coin shimmer
+  // Jackpot payoff: a low impact thump, a real bell rung three times (classic slot-machine
+  // bell), then a scatter of noise-based coin clinks settling into a tray.
   function playWinFanfare() {
     if (!soundOn) return;
     const actx = getAudioCtx();
     if (!actx) return;
     const t0 = actx.currentTime;
 
-    // low thump for weight, right on the landing hit
+    // impact thump on landing
     const thump = actx.createOscillator();
     const thumpGain = actx.createGain();
     thump.type = "sine";
-    thump.frequency.setValueAtTime(160, t0);
-    thump.frequency.exponentialRampToValueAtTime(50, t0 + 0.2);
-    thumpGain.gain.setValueAtTime(0.3, t0);
+    thump.frequency.setValueAtTime(150, t0);
+    thump.frequency.exponentialRampToValueAtTime(45, t0 + 0.2);
+    thumpGain.gain.setValueAtTime(0.28, t0);
     thumpGain.gain.exponentialRampToValueAtTime(0.0006, t0 + 0.25);
     thump.connect(thumpGain).connect(actx.destination);
     thump.start(t0);
     thump.stop(t0 + 0.26);
 
-    // wide ascending arpeggio, doubled in octaves for a fuller "jackpot" chord run
-    const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568.0]; // C5 E5 G5 C6 E6 G6
-    notes.forEach((freq, i) => {
-      const t1 = t0 + 0.05 + i * 0.08;
-      [1, 2].forEach((octave) => {
-        const osc = actx.createOscillator();
-        const gain = actx.createGain();
-        osc.type = octave === 1 ? "triangle" : "sine";
-        osc.frequency.value = freq * octave;
-        const peak = octave === 1 ? 0.28 : 0.12;
-        gain.gain.setValueAtTime(0.0001, t1);
-        gain.gain.exponentialRampToValueAtTime(peak, t1 + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0008, t1 + 0.45);
-        osc.connect(gain).connect(actx.destination);
-        osc.start(t1);
-        osc.stop(t1 + 0.5);
-      });
-    });
+    // three bell strikes, classic "ding-ding-ding" jackpot bell, each slightly brighter
+    const ringTimes = [t0 + 0.08, t0 + 0.3, t0 + 0.52];
+    ringTimes.forEach((t, i) => strikeBell(actx, t, 1046.5 * (1 + i * 0.015), 0.5 - i * 0.06));
 
-    // final held major chord — the "ta-da" landing
-    const chordTime = t0 + 0.05 + notes.length * 0.08 + 0.05;
-    [1046.5, 1318.5, 1568.0, 2093.0].forEach((freq) => {
-      const osc = actx.createOscillator();
+    // coin clinks — short filtered noise bursts, not tones, scattering after the bell
+    const coinStart = ringTimes[ringTimes.length - 1] + 0.4;
+    const coinCount = 10;
+    for (let i = 0; i < coinCount; i++) {
+      const t2 = coinStart + i * (0.07 + Math.random() * 0.05);
+      const noise = actx.createBufferSource();
+      noise.buffer = getNoiseBuffer(actx);
+      const bandpass = actx.createBiquadFilter();
+      bandpass.type = "bandpass";
+      bandpass.frequency.value = 2200 + Math.random() * 2400;
+      bandpass.Q.value = 8;
       const gain = actx.createGain();
-      osc.type = "triangle";
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.0001, chordTime);
-      gain.gain.exponentialRampToValueAtTime(0.2, chordTime + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.0006, chordTime + 0.9);
-      osc.connect(gain).connect(actx.destination);
-      osc.start(chordTime);
-      osc.stop(chordTime + 0.95);
-    });
-
-    // cascading coin-drop shimmer trailing after the chord
-    const coinStart = chordTime + 0.15;
-    const coinFreqs = [2093, 2349, 2637, 2793, 3136, 2489, 2794, 3520];
-    coinFreqs.forEach((freq, i) => {
-      const t2 = coinStart + i * (0.09 + Math.random() * 0.05);
-      const osc = actx.createOscillator();
-      const gain = actx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.0001, t2);
-      gain.gain.exponentialRampToValueAtTime(0.14, t2 + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0005, t2 + 0.35);
-      osc.connect(gain).connect(actx.destination);
-      osc.start(t2);
-      osc.stop(t2 + 0.4);
-    });
+      gain.gain.setValueAtTime(0.5, t2);
+      gain.gain.exponentialRampToValueAtTime(0.001, t2 + 0.09);
+      noise.connect(bandpass).connect(gain).connect(actx.destination);
+      noise.start(t2);
+      noise.stop(t2 + 0.1);
+    }
   }
 
   /* ---------------- Parsing ---------------- */
@@ -406,8 +385,6 @@
     const t0 = performance.now();
     let lastWedge = Math.floor((((start % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2)) / segAngle);
 
-    startRiser(duration / 1000);
-
     function frame(now) {
       const elapsed = now - t0;
       const t = Math.min(elapsed / duration, 1);
@@ -428,7 +405,6 @@
         rotation = rotation % (Math.PI * 2);
         spinning = false;
         spinBtn.disabled = false;
-        stopRiser();
         onLanded(winningIndex);
       }
     }

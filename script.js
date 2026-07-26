@@ -80,6 +80,7 @@
   /* ---------------- Casino sound engine (Web Audio, no external files) ---------------- */
   let audioCtx = null;
   let noiseBuffer = null;
+  let masterBus = null;
 
   function getAudioCtx() {
     if (!audioCtx) {
@@ -89,6 +90,26 @@
     }
     if (audioCtx.state === "suspended") audioCtx.resume();
     return audioCtx;
+  }
+
+  // Shared output bus: a gentle limiter plus a warmth-preserving lowpass so nothing
+  // spikes or turns harsh when several sounds overlap.
+  function getMasterBus(actx) {
+    if (masterBus) return masterBus;
+    const compressor = actx.createDynamicsCompressor();
+    compressor.threshold.value = -22;
+    compressor.knee.value = 28;
+    compressor.ratio.value = 3.5;
+    compressor.attack.value = 0.006;
+    compressor.release.value = 0.3;
+    const warmth = actx.createBiquadFilter();
+    warmth.type = "lowpass";
+    warmth.frequency.value = 5200;
+    const outGain = actx.createGain();
+    outGain.gain.value = 0.85;
+    compressor.connect(warmth).connect(outGain).connect(actx.destination);
+    masterBus = compressor;
+    return masterBus;
   }
 
   // A shared 1-second white noise buffer, reused and sliced for every noise-based hit
@@ -101,12 +122,13 @@
     return noiseBuffer;
   }
 
-  // Physical mechanical "clack" — the wheel's pin flicking past a wooden peg.
-  // Filtered noise, not a tone, so it sounds like an object, not a synth blip.
+  // Soft mechanical "tock" — the wheel's pin brushing past a peg. Filtered noise,
+  // tuned low and gentle rather than sharp and bright, so repeated ticks stay easy on the ear.
   function playTick(progress) {
     if (!soundOn) return;
     const actx = getAudioCtx();
     if (!actx) return;
+    const bus = getMasterBus(actx);
     const t0 = actx.currentTime;
 
     const noise = actx.createBufferSource();
@@ -114,101 +136,88 @@
 
     const bandpass = actx.createBiquadFilter();
     bandpass.type = "bandpass";
-    bandpass.frequency.value = 1400 + progress * 2600;
-    bandpass.Q.value = 8;
+    bandpass.frequency.value = 650 + progress * 900;
+    bandpass.Q.value = 2.2;
 
-    const highpass = actx.createBiquadFilter();
-    highpass.type = "highpass";
-    highpass.frequency.value = 900;
+    const lowpass = actx.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 2200;
 
     const gain = actx.createGain();
-    gain.gain.setValueAtTime(0.9, t0);
-    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.035);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(0.32, t0 + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.05);
 
-    noise.connect(bandpass).connect(highpass).connect(gain).connect(actx.destination);
+    noise.connect(bandpass).connect(lowpass).connect(gain).connect(bus);
     noise.start(t0);
-    noise.stop(t0 + 0.04);
+    noise.stop(t0 + 0.06);
 
-    // a soft low knock underneath, giving the click some body
+    // a soft low knock underneath, giving the click some roundness without any edge
     const knock = actx.createOscillator();
     const knockGain = actx.createGain();
     knock.type = "sine";
-    knock.frequency.setValueAtTime(180, t0);
-    knock.frequency.exponentialRampToValueAtTime(90, t0 + 0.03);
-    knockGain.gain.setValueAtTime(0.12, t0);
-    knockGain.gain.exponentialRampToValueAtTime(0.0006, t0 + 0.04);
-    knock.connect(knockGain).connect(actx.destination);
+    knock.frequency.setValueAtTime(150, t0);
+    knock.frequency.exponentialRampToValueAtTime(80, t0 + 0.05);
+    knockGain.gain.setValueAtTime(0.0001, t0);
+    knockGain.gain.linearRampToValueAtTime(0.09, t0 + 0.006);
+    knockGain.gain.exponentialRampToValueAtTime(0.0006, t0 + 0.06);
+    knock.connect(knockGain).connect(bus);
     knock.start(t0);
-    knock.stop(t0 + 0.045);
+    knock.stop(t0 + 0.065);
   }
 
-  // One strike of a real bell/coin: a fundamental plus inharmonic partials (not integer
-  // multiples), each ringing out at a different rate — this is what makes it sound
-  // metallic rather than musical.
+  // One strike of a mellow bell: a fundamental plus a few soft inharmonic partials,
+  // each rounded off with its own lowpass so the tone stays warm instead of glassy.
   function strikeBell(actx, time, freq, peakGain) {
+    const bus = getMasterBus(actx);
     const partials = [
-      { ratio: 1, amp: 1, decay: 0.85 },
-      { ratio: 2.4, amp: 0.55, decay: 0.6 },
-      { ratio: 3.9, amp: 0.32, decay: 0.42 },
-      { ratio: 5.6, amp: 0.2, decay: 0.3 },
-      { ratio: 7.8, amp: 0.12, decay: 0.2 },
+      { ratio: 1, amp: 1, decay: 1.0, cutoff: 2600 },
+      { ratio: 2.4, amp: 0.4, decay: 0.7, cutoff: 3200 },
+      { ratio: 3.9, amp: 0.2, decay: 0.5, cutoff: 3600 },
+      { ratio: 5.6, amp: 0.1, decay: 0.35, cutoff: 4000 },
     ];
     partials.forEach((p) => {
       const osc = actx.createOscillator();
       const gain = actx.createGain();
+      const lp = actx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = p.cutoff;
       osc.type = "sine";
       osc.frequency.value = freq * p.ratio;
       gain.gain.setValueAtTime(0.0001, time);
-      gain.gain.exponentialRampToValueAtTime(peakGain * p.amp, time + 0.006);
+      gain.gain.linearRampToValueAtTime(peakGain * p.amp, time + 0.012);
       gain.gain.exponentialRampToValueAtTime(0.0004, time + p.decay);
-      osc.connect(gain).connect(actx.destination);
+      osc.connect(lp).connect(gain).connect(bus);
       osc.start(time);
       osc.stop(time + p.decay + 0.05);
     });
   }
 
-  // Jackpot payoff: a low impact thump, a real bell rung three times (classic slot-machine
-  // bell), then a scatter of noise-based coin clinks settling into a tray.
+  // Jackpot payoff: a soft low thump, then a mellow bell rung three times —
+  // rounded and warm rather than bright and clangy.
   function playWinFanfare() {
     if (!soundOn) return;
     const actx = getAudioCtx();
     if (!actx) return;
+    const bus = getMasterBus(actx);
     const t0 = actx.currentTime;
 
-    // impact thump on landing
+    // gentle impact thump on landing
     const thump = actx.createOscillator();
     const thumpGain = actx.createGain();
     thump.type = "sine";
-    thump.frequency.setValueAtTime(150, t0);
-    thump.frequency.exponentialRampToValueAtTime(45, t0 + 0.2);
-    thumpGain.gain.setValueAtTime(0.28, t0);
-    thumpGain.gain.exponentialRampToValueAtTime(0.0006, t0 + 0.25);
-    thump.connect(thumpGain).connect(actx.destination);
+    thump.frequency.setValueAtTime(140, t0);
+    thump.frequency.exponentialRampToValueAtTime(48, t0 + 0.22);
+    thumpGain.gain.setValueAtTime(0.0001, t0);
+    thumpGain.gain.linearRampToValueAtTime(0.2, t0 + 0.015);
+    thumpGain.gain.exponentialRampToValueAtTime(0.0006, t0 + 0.28);
+    thump.connect(thumpGain).connect(bus);
     thump.start(t0);
-    thump.stop(t0 + 0.26);
+    thump.stop(t0 + 0.29);
 
-    // three bell strikes, classic "ding-ding-ding" jackpot bell, each slightly brighter
-    const ringTimes = [t0 + 0.08, t0 + 0.3, t0 + 0.52];
-    ringTimes.forEach((t, i) => strikeBell(actx, t, 1046.5 * (1 + i * 0.015), 0.5 - i * 0.06));
-
-    // coin clinks — short filtered noise bursts, not tones, scattering after the bell
-    const coinStart = ringTimes[ringTimes.length - 1] + 0.4;
-    const coinCount = 10;
-    for (let i = 0; i < coinCount; i++) {
-      const t2 = coinStart + i * (0.07 + Math.random() * 0.05);
-      const noise = actx.createBufferSource();
-      noise.buffer = getNoiseBuffer(actx);
-      const bandpass = actx.createBiquadFilter();
-      bandpass.type = "bandpass";
-      bandpass.frequency.value = 2200 + Math.random() * 2400;
-      bandpass.Q.value = 8;
-      const gain = actx.createGain();
-      gain.gain.setValueAtTime(0.5, t2);
-      gain.gain.exponentialRampToValueAtTime(0.001, t2 + 0.09);
-      noise.connect(bandpass).connect(gain).connect(actx.destination);
-      noise.start(t2);
-      noise.stop(t2 + 0.1);
-    }
+    // three soft bell strikes, mellow "ding-ding-ding", each a touch gentler than the last
+    const ringTimes = [t0 + 0.1, t0 + 0.34, t0 + 0.58];
+    ringTimes.forEach((t, i) => strikeBell(actx, t, 1046.5 * (1 + i * 0.01), 0.34 - i * 0.05));
   }
 
   /* ---------------- Parsing ---------------- */

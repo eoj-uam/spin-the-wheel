@@ -158,6 +158,57 @@
       }
     });
 
+    // Touch: swipe on the board to steer
+    let touchStartX = 0;
+    let touchStartY = 0;
+    canvas.addEventListener(
+      "touchstart",
+      (e) => {
+        const t = e.touches[0];
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+      },
+      { passive: true }
+    );
+    canvas.addEventListener(
+      "touchend",
+      (e) => {
+        if (!running) return;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - touchStartX;
+        const dy = t.clientY - touchStartY;
+        if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+        let nd;
+        if (Math.abs(dx) > Math.abs(dy)) nd = dx > 0 ? { x: 1, y: 0 } : { x: -1, y: 0 };
+        else nd = dy > 0 ? { x: 0, y: 1 } : { x: 0, y: -1 };
+        if (nd.x === -dir.x && nd.y === -dir.y) return;
+        nextDir = nd;
+      },
+      { passive: true }
+    );
+
+    // Touch: on-screen D-pad
+    const dpad = document.getElementById("snakeDpad");
+    if (dpad) {
+      const dirMap = {
+        up: { x: 0, y: -1 },
+        down: { x: 0, y: 1 },
+        left: { x: -1, y: 0 },
+        right: { x: 1, y: 0 },
+      };
+      dpad.querySelectorAll("button").forEach((btn) => {
+        const nd = dirMap[btn.dataset.dir];
+        const handler = (e) => {
+          e.preventDefault();
+          if (!running) return;
+          if (nd.x === -dir.x && nd.y === -dir.y) return;
+          nextDir = nd;
+        };
+        btn.addEventListener("touchstart", handler, { passive: false });
+        btn.addEventListener("click", handler);
+      });
+    }
+
     reset();
     draw();
   })();
@@ -306,6 +357,47 @@
       if (key === "arrowright" || key === "d") keys.right = false;
     });
 
+    // Touch: drag directly on the board to move the cart
+    function moveToTouch(clientX) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = W / rect.width;
+      const x = (clientX - rect.left) * scaleX;
+      playerX = Math.max(0, Math.min(W - playerW, x - playerW / 2));
+    }
+    canvas.addEventListener(
+      "touchstart",
+      (e) => {
+        moveToTouch(e.touches[0].clientX);
+      },
+      { passive: true }
+    );
+    canvas.addEventListener(
+      "touchmove",
+      (e) => {
+        e.preventDefault();
+        moveToTouch(e.touches[0].clientX);
+      },
+      { passive: false }
+    );
+
+    // Touch: on-screen left/right buttons
+    const lr = document.getElementById("dodgeLR");
+    if (lr) {
+      lr.querySelectorAll("button").forEach((btn) => {
+        const side = btn.dataset.dir;
+        const setState = (val) => (e) => {
+          e.preventDefault();
+          keys[side] = val;
+        };
+        btn.addEventListener("touchstart", setState(true), { passive: false });
+        btn.addEventListener("touchend", setState(false), { passive: false });
+        btn.addEventListener("touchcancel", setState(false), { passive: false });
+        btn.addEventListener("mousedown", setState(true));
+        btn.addEventListener("mouseup", setState(false));
+        btn.addEventListener("mouseleave", setState(false));
+      });
+    }
+
     reset();
     draw(0, 1);
   })();
@@ -380,13 +472,13 @@
       spawnTimer = setTimeout(spawnTarget, delay);
     }
 
-    canvas.addEventListener("click", (e) => {
+    function tryHit(clientX, clientY) {
       if (!running || !target) return;
       const rect = canvas.getBoundingClientRect();
       const scaleX = W / rect.width;
       const scaleY = H / rect.height;
-      const x = (e.clientX - rect.left) * scaleX;
-      const y = (e.clientY - rect.top) * scaleY;
+      const x = (clientX - rect.left) * scaleX;
+      const y = (clientY - rect.top) * scaleY;
       const dist = Math.hypot(x - target.x, y - target.y);
       if (dist <= target.r) {
         score += 1;
@@ -396,7 +488,18 @@
         draw();
         scheduleSpawn();
       }
-    });
+    }
+
+    canvas.addEventListener("click", (e) => tryHit(e.clientX, e.clientY));
+    canvas.addEventListener(
+      "touchstart",
+      (e) => {
+        e.preventDefault();
+        const t = e.changedTouches[0];
+        tryHit(t.clientX, t.clientY);
+      },
+      { passive: false }
+    );
 
     function tick() {
       timeLeft -= 1;

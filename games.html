@@ -58,11 +58,18 @@
                 <button type="button" class="spin-btn" id="snakeStart" style="margin-top:6px;">START</button>
               </div>
             </div>
+            <div class="touch-dpad" id="snakeDpad" aria-hidden="true">
+              <button type="button" class="up" data-dir="up">▲</button>
+              <button type="button" class="left" data-dir="left">◀</button>
+              <button type="button" class="right" data-dir="right">▶</button>
+              <button type="button" class="down" data-dir="down">▼</button>
+            </div>
           </div>
           <aside class="game-side">
             <h3>How to play</h3>
             <ul>
               <li>Arrow keys or WASD to steer</li>
+              <li>On touch devices: swipe on the board or use the on-screen arrows</li>
               <li>Grab a ticket to grow and score</li>
               <li>Speed climbs the longer you survive</li>
               <li>Hitting a wall or yourself ends the run</li>
@@ -88,11 +95,16 @@
                 <button type="button" class="spin-btn" id="dodgeStart" style="margin-top:6px;">START</button>
               </div>
             </div>
+            <div class="touch-lr" id="dodgeLR" aria-hidden="true">
+              <button type="button" data-dir="left">◀</button>
+              <button type="button" data-dir="right">▶</button>
+            </div>
           </div>
           <aside class="game-side">
             <h3>How to play</h3>
             <ul>
               <li>Left / right arrows or A / D to move the cart</li>
+              <li>On touch devices: drag on the board or use the on-screen buttons</li>
               <li>Wedges fall faster and thicker over time</li>
               <li>Score is how long you survive, in seconds</li>
               <li>One hit ends the run</li>

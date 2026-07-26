@@ -665,6 +665,7 @@ footer{
   height: 100%;
   display: block;
   cursor: pointer;
+  touch-action: none;
 }
 .game-hud{
   display: flex;
@@ -674,6 +675,58 @@ footer{
 .game-hud .stat{ text-align: center; }
 .game-hud .stat .n{ font-size: 1.3rem; font-weight: 700; color: var(--ink); display:block; }
 .game-hud .stat .l{ font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
+
+/* On-screen touch controls — shown only on touch devices, hidden for mouse/keyboard */
+.touch-dpad{
+  display: none;
+  grid-template-areas:
+    ".    up    ."
+    "left .     right"
+    ".    down  .";
+  grid-template-columns: 54px 54px 54px;
+  grid-template-rows: 54px 54px 54px;
+  gap: 6px;
+  margin-top: 4px;
+}
+.touch-dpad button{
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  border-radius: 12px;
+  font-size: 1.3rem;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  touch-action: none;
+}
+.touch-dpad .up{ grid-area: up; }
+.touch-dpad .down{ grid-area: down; }
+.touch-dpad .left{ grid-area: left; }
+.touch-dpad .right{ grid-area: right; }
+
+.touch-lr{
+  display: none;
+  gap: 16px;
+  margin-top: 4px;
+  width: 100%;
+  max-width: 320px;
+}
+.touch-lr button{
+  flex: 1;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  font-size: 1.4rem;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  color: var(--ink);
+  touch-action: none;
+}
+
+@media (hover: none) and (pointer: coarse){
+  .touch-dpad{ display: grid; }
+  .touch-lr{ display: flex; }
+}
 
 .game-overlay{
   position: absolute;

@@ -7,6 +7,8 @@
     snake: document.getElementById("panel-snake"),
     dodge: document.getElementById("panel-dodge"),
     whack: document.getElementById("panel-whack"),
+    pacman: document.getElementById("panel-pacman"),
+    flyer: document.getElementById("panel-flyer"),
   };
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {

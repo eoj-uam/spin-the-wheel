@@ -31,26 +31,37 @@
     const overlay = document.getElementById("snakeOverlay");
     const startBtn = document.getElementById("snakeStart");
     const scoreEl = document.getElementById("snakeScore");
+    const levelEl = document.getElementById("snakeLevel");
     const speedEl = document.getElementById("snakeSpeed");
     const highEl = document.getElementById("snakeHigh");
     const HIGH_KEY = "stw_hs_snake";
 
     const cols = 22;
     const cell = canvas.width / cols;
-    let snake, dir, nextDir, food, score, interval, acc, lastTime, running;
+    const BASE_INTERVAL = 210; // slower start
+    const MIN_INTERVAL = 75;
+    const LEVEL_STEP = 15;
+    const PELLETS_PER_LEVEL = 5;
+    let snake, dir, nextDir, food, score, level, interval, acc, lastTime, running;
 
     highEl.textContent = localStorage.getItem(HIGH_KEY) || "0";
+
+    function applyLevel() {
+      level = 1 + Math.floor(score / PELLETS_PER_LEVEL);
+      interval = Math.max(MIN_INTERVAL, BASE_INTERVAL - (level - 1) * LEVEL_STEP);
+      levelEl.textContent = String(level);
+      speedEl.textContent = (BASE_INTERVAL / interval).toFixed(1) + "×";
+    }
 
     function reset() {
       snake = [{ x: 10, y: 11 }, { x: 9, y: 11 }, { x: 8, y: 11 }];
       dir = { x: 1, y: 0 };
       nextDir = { x: 1, y: 0 };
       score = 0;
-      interval = 140;
       acc = 0;
+      applyLevel();
       placeFood();
       scoreEl.textContent = "0";
-      speedEl.textContent = "1×";
     }
 
     function placeFood() {
@@ -103,8 +114,7 @@
       if (head.x === food.x && head.y === food.y) {
         score += 1;
         scoreEl.textContent = String(score);
-        interval = Math.max(60, 140 - score * 3);
-        speedEl.textContent = (140 / interval).toFixed(1) + "×";
+        applyLevel();
         placeFood();
       } else {
         snake.pop();
@@ -225,6 +235,7 @@
     const overlay = document.getElementById("dodgeOverlay");
     const startBtn = document.getElementById("dodgeStart");
     const scoreEl = document.getElementById("dodgeScore");
+    const levelEl = document.getElementById("dodgeLevel");
     const speedEl = document.getElementById("dodgeSpeed");
     const highEl = document.getElementById("dodgeHigh");
     const HIGH_KEY = "stw_hs_dodge";
@@ -233,8 +244,12 @@
     const H = canvas.height;
     const playerW = 54;
     const playerH = 16;
+    const SECONDS_PER_LEVEL = 8;
+    const SPAWN_BASE = 1050; // slower start
+    const SPAWN_MIN = 320;
+    const SPAWN_STEP = 75;
 
-    let playerX, wedges, running, startTime, lastSpawn, keys, raf;
+    let playerX, wedges, running, startTime, lastSpawn, keys, raf, level;
 
     highEl.textContent = localStorage.getItem(HIGH_KEY) || "0";
 
@@ -244,7 +259,9 @@
       startTime = performance.now();
       lastSpawn = 0;
       keys = { left: false, right: false };
+      level = 1;
       scoreEl.textContent = "0";
+      levelEl.textContent = "1";
       speedEl.textContent = "1×";
     }
 
@@ -286,8 +303,10 @@
     function loop(now) {
       if (!running) return;
       const elapsed = (now - startTime) / 1000;
-      const speedMult = 1 + elapsed * 0.09;
-      const spawnEvery = Math.max(280, 900 - elapsed * 40);
+      level = 1 + Math.floor(elapsed / SECONDS_PER_LEVEL);
+      const speedMult = 1 + (level - 1) * 0.28;
+      const spawnEvery = Math.max(SPAWN_MIN, SPAWN_BASE - (level - 1) * SPAWN_STEP);
+      levelEl.textContent = String(level);
 
       if (now - lastSpawn > spawnEvery) {
         lastSpawn = now;
@@ -414,22 +433,40 @@
     const overlay = document.getElementById("whackOverlay");
     const startBtn = document.getElementById("whackStart");
     const scoreEl = document.getElementById("whackScore");
+    const levelEl = document.getElementById("whackLevel");
     const timeEl = document.getElementById("whackTime");
     const highEl = document.getElementById("whackHigh");
     const HIGH_KEY = "stw_hs_whack";
 
     const W = canvas.width;
     const H = canvas.height;
-    let score, timeLeft, target, running, spawnTimer, countdownTimer, life;
+    const POINTS_PER_LEVEL = 4;
+    const RADIUS_BASE = 46; // slower start — bigger, easier target
+    const RADIUS_MIN = 20;
+    const RADIUS_STEP = 2.5;
+    const LIFESPAN_BASE = 1150;
+    const LIFESPAN_MIN = 520;
+    const LIFESPAN_STEP = 55;
+    const SPAWN_DELAY_BASE = 260;
+    const SPAWN_DELAY_STEP = 12;
+
+    let score, level, timeLeft, target, running, spawnTimer, countdownTimer, life;
 
     highEl.textContent = localStorage.getItem(HIGH_KEY) || "0";
 
     function reset() {
       score = 0;
+      level = 1;
       timeLeft = 30;
       scoreEl.textContent = "0";
+      levelEl.textContent = "1";
       timeEl.textContent = "30";
       target = null;
+    }
+
+    function applyLevel() {
+      level = 1 + Math.floor(score / POINTS_PER_LEVEL);
+      levelEl.textContent = String(level);
     }
 
     function draw() {
@@ -452,7 +489,7 @@
     }
 
     function spawnTarget() {
-      const r = Math.max(20, 40 - score * 0.8);
+      const r = Math.max(RADIUS_MIN, RADIUS_BASE - (level - 1) * RADIUS_STEP);
       target = {
         x: r + Math.random() * (W - r * 2),
         y: r + Math.random() * (H - r * 2),
@@ -460,7 +497,7 @@
       };
       draw();
       clearTimeout(life);
-      const lifespan = Math.max(500, 1000 - score * 15);
+      const lifespan = Math.max(LIFESPAN_MIN, LIFESPAN_BASE - (level - 1) * LIFESPAN_STEP);
       life = setTimeout(() => {
         target = null;
         draw();
@@ -470,7 +507,8 @@
 
     function scheduleSpawn() {
       clearTimeout(spawnTimer);
-      const delay = 200 + Math.random() * 400;
+      const delayMin = Math.max(120, SPAWN_DELAY_BASE - (level - 1) * SPAWN_DELAY_STEP);
+      const delay = delayMin + Math.random() * 350;
       spawnTimer = setTimeout(spawnTarget, delay);
     }
 
@@ -485,6 +523,7 @@
       if (dist <= target.r) {
         score += 1;
         scoreEl.textContent = String(score);
+        applyLevel();
         clearTimeout(life);
         target = null;
         draw();
@@ -551,29 +590,38 @@
     const overlay = document.getElementById("pacmanOverlay");
     const startBtn = document.getElementById("pacmanStart");
     const scoreEl = document.getElementById("pacmanScore");
+    const levelEl = document.getElementById("pacmanLevel");
     const livesEl = document.getElementById("pacmanLives");
     const highEl = document.getElementById("pacmanHigh");
     const HIGH_KEY = "stw_hs_pacman";
 
-    // Validated maze: '#' wall, '.' pellet, ' ' walkable/no pellet (ghost house)
+    // Loop-lattice maze: every corridor wraps around a pillar, so there are no dead
+    // ends and always multiple ways to escape a chaser. Validated offline (176 pellets,
+    // fully connected, zero dead-end pockets outside the ghost house).
     const MAZE_TEMPLATE = [
-      "#############",
-      "#...........#",
-      "#.###...###.#",
-      "#.###...###.#",
-      "#.###...###.#",
-      "#....# #....#",
-      "#....# #....#",
-      "#....###....#",
-      "#.###...###.#",
-      "#.###...###.#",
-      "#.###...###.#",
-      "#...........#",
-      "#############",
+      "#################",
+      "#...............#",
+      "#.#.#.#.#.#.#.#.#",
+      "#...............#",
+      "#.#.#.#.#.#.#.#.#",
+      "#...............#",
+      "#.#.#.......#.#.#",
+      "#......# #......#",
+      "#.#.#..# #..#.#.#",
+      "#......###......#",
+      "#.#.#.......#.#.#",
+      "#...............#",
+      "#.#.#.#.#.#.#.#.#",
+      "#...............#",
+      "#.#.#.#.#.#.#.#.#",
+      "#...............#",
+      "#################",
     ];
     const rows = MAZE_TEMPLATE.length;
     const cols = MAZE_TEMPLATE[0].length;
     const cell = canvas.width / cols;
+    const HOUSE_ROW = 8;
+    const HOUSE_COL = 8;
 
     const DIRS = {
       up: { x: 0, y: -1 },
@@ -583,7 +631,14 @@
     };
     const OPPOSITE = { up: "down", down: "up", left: "right", right: "left" };
 
-    let maze, player, ghosts, score, lives, pelletsLeft, interval, acc, lastTime, running, queuedDir, gameActive;
+    let maze, player, ghosts, score, level, lives, pelletsLeft;
+    let playerAcc, ghostAcc, playerInterval, ghostInterval, lastTime, running, queuedDir;
+
+    const PLAYER_INTERVAL = 150; // constant — player speed stays predictable
+    const GHOST_BASE_INTERVAL = 300; // level 1: ghosts noticeably slower than the player
+    const GHOST_MIN_INTERVAL = 140;
+    const GHOST_STEP = 20;
+    const PELLETS_PER_LEVEL = 22;
 
     highEl.textContent = localStorage.getItem(HIGH_KEY) || "0";
 
@@ -601,6 +656,12 @@
       return cellAt(r + d.y, c + d.x) !== "#";
     }
 
+    function applyLevel() {
+      level = 1 + Math.floor(score / PELLETS_PER_LEVEL);
+      ghostInterval = Math.max(GHOST_MIN_INTERVAL, GHOST_BASE_INTERVAL - (level - 1) * GHOST_STEP);
+      levelEl.textContent = String(level);
+    }
+
     function reset() {
       maze = buildMaze();
       pelletsLeft = 0;
@@ -608,13 +669,15 @@
       player = { row: 1, col: 1, dir: "right" };
       queuedDir = "right";
       ghosts = [
-        { row: 6, col: 6, dir: "up", color: "#FF5A5F" },
-        { row: 6, col: 6, dir: "up", color: "#5B7FDE" },
+        { row: HOUSE_ROW, col: HOUSE_COL, dir: "up", color: "#FF5A5F" },
+        { row: HOUSE_ROW, col: HOUSE_COL, dir: "up", color: "#5B7FDE" },
       ];
       score = 0;
       lives = 3;
-      interval = 170;
-      acc = 0;
+      playerInterval = PLAYER_INTERVAL;
+      playerAcc = 0;
+      ghostAcc = 0;
+      applyLevel();
       scoreEl.textContent = "0";
       livesEl.textContent = "3";
     }
@@ -703,8 +766,9 @@
       let candidates = options.filter((d) => d !== OPPOSITE[g.dir]);
       if (candidates.length === 0) candidates = options;
 
+      const chaseChance = Math.min(0.85, 0.45 + (level - 1) * 0.05);
       let choice;
-      if (Math.random() < 0.72) {
+      if (Math.random() < chaseChance) {
         choice = candidates.reduce((best, d) => {
           const dd = DIRS[d];
           const dist = manhattan(g.row + dd.y, g.col + dd.x, player.row, player.col);
@@ -736,13 +800,13 @@
       player.dir = "right";
       queuedDir = "right";
       ghosts.forEach((g) => {
-        g.row = 6;
-        g.col = 6;
+        g.row = HOUSE_ROW;
+        g.col = HOUSE_COL;
         g.dir = "up";
       });
     }
 
-    function step() {
+    function stepPlayer() {
       if (canMove(player.row, player.col, queuedDir)) player.dir = queuedDir;
       if (canMove(player.row, player.col, player.dir)) {
         const d = DIRS[player.dir];
@@ -754,27 +818,41 @@
         score += 1;
         pelletsLeft -= 1;
         scoreEl.textContent = String(score);
-        interval = Math.max(110, 170 - score * 0.6);
+        applyLevel();
         if (pelletsLeft <= 0) {
           endGame(true);
-          return;
+          return true;
         }
       }
+      if (checkCatch()) loseLife();
+      return false;
+    }
+
+    function stepGhosts() {
       ghosts.forEach(moveGhost);
       if (checkCatch()) loseLife();
-      draw();
     }
 
     function loop(now) {
       if (!running) return;
       const dt = now - lastTime;
       lastTime = now;
-      acc += dt;
-      if (acc >= interval) {
-        acc = 0;
-        step();
+      playerAcc += dt;
+      ghostAcc += dt;
+
+      let ended = false;
+      if (playerAcc >= playerInterval) {
+        playerAcc = 0;
+        ended = stepPlayer();
       }
-      if (running) requestAnimationFrame(loop);
+      if (!ended && ghostAcc >= ghostInterval) {
+        ghostAcc = 0;
+        stepGhosts();
+      }
+      if (running) {
+        draw();
+        requestAnimationFrame(loop);
+      }
     }
 
     function endGame(won) {
@@ -869,6 +947,7 @@
     const overlay = document.getElementById("flyerOverlay");
     const startBtn = document.getElementById("flyerStart");
     const scoreEl = document.getElementById("flyerScore");
+    const levelEl = document.getElementById("flyerLevel");
     const speedEl = document.getElementById("flyerSpeed");
     const highEl = document.getElementById("flyerHigh");
     const HIGH_KEY = "stw_hs_flyer";
@@ -878,8 +957,11 @@
     const gapHeight = 150;
     const poleWidth = 46;
     const balloonR = 15;
+    const PASSES_PER_LEVEL = 4;
+    const LEVEL_SPEED_STEP = 0.22;
+    const MAX_SPEED_MULT = 2.2;
 
-    let balloonY, velocity, poles, score, running, startTime, raf;
+    let balloonY, velocity, poles, score, level, running, startTime, raf;
 
     highEl.textContent = localStorage.getItem(HIGH_KEY) || "0";
 
@@ -888,8 +970,10 @@
       velocity = 0;
       poles = [{ x: W + 60, gapY: 120 + Math.random() * (H - 240), passed: false }];
       score = 0;
+      level = 1;
       startTime = performance.now();
       scoreEl.textContent = "0";
+      levelEl.textContent = "1";
       speedEl.textContent = "1×";
     }
 
@@ -933,8 +1017,7 @@
 
     function loop(now) {
       if (!running) return;
-      const elapsed = (now - startTime) / 1000;
-      const speedMult = 1 + Math.min(elapsed * 0.045, 1.6);
+      const speedMult = Math.min(MAX_SPEED_MULT, 1 + (level - 1) * LEVEL_SPEED_STEP);
 
       velocity += 0.34;
       balloonY += velocity;
@@ -950,6 +1033,8 @@
           p.passed = true;
           score += 1;
           scoreEl.textContent = String(score);
+          level = 1 + Math.floor(score / PASSES_PER_LEVEL);
+          levelEl.textContent = String(level);
         }
         if (p.x < -poleWidth) poles.splice(i, 1);
       }

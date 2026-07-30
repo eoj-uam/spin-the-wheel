@@ -594,6 +594,75 @@ footer{
 .post-list .tag{ font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; color: var(--teal); letter-spacing: 0.1em; text-transform: uppercase; }
 .post-list h2{ margin: 6px 0 6px; font-size: 1.05rem; }
 .post-list p{ margin: 0; font-size: 0.9rem; }
+.post-list a{ text-decoration: none; color: inherit; }
+
+/* ---------- Full blog post articles ---------- */
+.post-back{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  margin-bottom: 18px;
+}
+.post-back:hover{ color: var(--coral); }
+.post-meta{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.post-meta .tag{
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--teal);
+  background: var(--surface);
+  padding: 4px 10px;
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+}
+.post-meta .date{ font-size: 0.82rem; color: var(--ink-soft); }
+.page ul.post-body-list, .page ol.post-body-list{ margin: 0 0 20px; padding-left: 22px; }
+.page ul.post-body-list li, .page ol.post-body-list li{ margin-bottom: 8px; font-size: 1.02rem; color: var(--ink); }
+.post-cta{
+  margin: 34px 0;
+  background: var(--surface);
+  border-radius: 14px;
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.post-cta p{ margin-bottom: 14px; }
+.related-posts{
+  margin-top: 44px;
+  padding-top: 30px;
+  border-top: 1px solid var(--line);
+}
+.related-posts h2{ margin-top: 0; }
+.related-grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 640px){
+  .related-grid{ grid-template-columns: repeat(2, 1fr); }
+}
+.related-grid a{
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.related-grid a:hover{ color: var(--coral); }
 
 /* ---------- Games ---------- */
 .games-intro{ padding: 56px 0 10px; }

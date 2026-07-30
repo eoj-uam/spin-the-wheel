@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://www.spinthewheeldecisionmaker.com/sitemap.xml

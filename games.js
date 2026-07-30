@@ -669,8 +669,8 @@
       player = { row: 1, col: 1, dir: "right" };
       queuedDir = "right";
       ghosts = [
-        { row: HOUSE_ROW, col: HOUSE_COL, dir: "up", color: "#FF5A5F" },
-        { row: HOUSE_ROW, col: HOUSE_COL, dir: "up", color: "#5B7FDE" },
+        { row: HOUSE_ROW, col: HOUSE_COL, dir: "up", color: "#FF0000" },
+        { row: HOUSE_ROW, col: HOUSE_COL, dir: "up", color: "#FFB8FF" },
       ];
       score = 0;
       lives = 3;
@@ -693,9 +693,14 @@
     }
 
     function draw() {
-      const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
-      const ink = getComputedStyle(document.documentElement).getPropertyValue("--ink").trim();
-      ctx.fillStyle = bg;
+      // Fixed classic arcade palette — deliberately ignores the site's paper/midnight/neon
+      // theme so this always reads as a Pac-Man-style board.
+      const ARCADE_BG = "#0A0A18";
+      const WALL_BLUE = "#2626FF";
+      const WALL_GLOW = "#5B5BFF";
+      const PELLET = "#FCE8C6";
+
+      ctx.fillStyle = ARCADE_BG;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       for (let r = 0; r < rows; r++) {
@@ -704,24 +709,31 @@
           const x = c * cell;
           const y = r * cell;
           if (ch === "#") {
-            ctx.fillStyle = ink;
-            roundRect(x + 1.5, y + 1.5, cell - 3, cell - 3, 4);
-            ctx.fill();
+            // hollow "tube" wall: a blue outline with a soft glow, not a solid block —
+            // closer to the look of the original arcade maze
+            ctx.save();
+            ctx.shadowColor = WALL_GLOW;
+            ctx.shadowBlur = 4;
+            ctx.strokeStyle = WALL_BLUE;
+            ctx.lineWidth = 2.4;
+            roundRect(x + 3, y + 3, cell - 6, cell - 6, 5);
+            ctx.stroke();
+            ctx.restore();
           } else if (ch === ".") {
-            ctx.fillStyle = "#06A77D";
+            ctx.fillStyle = PELLET;
             ctx.beginPath();
-            ctx.arc(x + cell / 2, y + cell / 2, cell * 0.11, 0, Math.PI * 2);
+            ctx.arc(x + cell / 2, y + cell / 2, cell * 0.09, 0, Math.PI * 2);
             ctx.fill();
           }
         }
       }
 
-      // player — a pac-style circle with a mouth wedge cut toward its direction
+      // player — classic yellow pac-style circle with a mouth wedge cut toward its direction
       const px = player.col * cell + cell / 2;
       const py = player.row * cell + cell / 2;
       const mouthAngle = { right: 0, down: 90, left: 180, up: 270 }[player.dir] || 0;
       const openness = 0.24 + 0.1 * Math.sin(performance.now() / 90);
-      ctx.fillStyle = "#FFB627";
+      ctx.fillStyle = "#FFE600";
       ctx.beginPath();
       ctx.arc(
         px,
@@ -734,7 +746,7 @@
       ctx.closePath();
       ctx.fill();
 
-      // ghosts
+      // ghosts — classic dome + wavy-skirt silhouette, with eyes glancing toward travel direction
       ghosts.forEach((g) => {
         const gx = g.col * cell + cell / 2;
         const gy = g.row * cell + cell / 2;
@@ -749,10 +761,17 @@
         ctx.lineTo(gx - cell * 0.4, gy + cell * 0.36);
         ctx.closePath();
         ctx.fill();
+
+        const eyeShift = { right: [2, 0], left: [-2, 0], up: [0, -2], down: [0, 2] }[g.dir] || [0, 0];
         ctx.fillStyle = "#fff";
         ctx.beginPath();
         ctx.arc(gx - cell * 0.13, gy - cell * 0.05, cell * 0.1, 0, Math.PI * 2);
         ctx.arc(gx + cell * 0.13, gy - cell * 0.05, cell * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#233";
+        ctx.beginPath();
+        ctx.arc(gx - cell * 0.13 + eyeShift[0], gy - cell * 0.05 + eyeShift[1], cell * 0.05, 0, Math.PI * 2);
+        ctx.arc(gx + cell * 0.13 + eyeShift[0], gy - cell * 0.05 + eyeShift[1], cell * 0.05, 0, Math.PI * 2);
         ctx.fill();
       });
     }

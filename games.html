@@ -158,11 +158,11 @@
               <div class="stat"><span class="n" id="pacmanLevel">1</span><span class="l">Level</span></div>
               <div class="stat"><span class="n" id="pacmanLives">3</span><span class="l">Lives</span></div>
             </div>
-            <div class="game-canvas-wrap">
-              <canvas id="pacmanCanvas" width="442" height="442"></canvas>
+            <div class="game-canvas-wrap pacman-board">
+              <canvas id="pacmanCanvas" width="456" height="504"></canvas>
               <div class="game-overlay" id="pacmanOverlay">
                 <h3>Ticket Muncher</h3>
-                <p>Arrow keys or WASD. Eat every ticket in the maze — the inspectors are not friendly.</p>
+                <p>Arrow keys or WASD. Eat every ticket — grab a big golden ticket and the inspectors turn edible for a few seconds.</p>
                 <button type="button" class="spin-btn" id="pacmanStart" style="margin-top:6px;">START</button>
               </div>
             </div>
@@ -179,6 +179,7 @@
               <li>Arrow keys or WASD to move through the maze</li>
               <li>On touch devices: swipe on the board or use the on-screen arrows</li>
               <li>Eat every ticket to win — the inspectors get faster as the maze empties</li>
+              <li>The four big golden tickets turn the inspectors blue and edible for a few seconds — eat them for bonus points</li>
               <li>Getting caught costs a life; three lives and you're out</li>
             </ul>
             <div class="high">Best score <b id="pacmanHigh">0</b></div>

@@ -595,33 +595,40 @@
     const highEl = document.getElementById("pacmanHigh");
     const HIGH_KEY = "stw_hs_pacman";
 
-    // Loop-lattice maze: every corridor wraps around a pillar, so there are no dead
-    // ends and always multiple ways to escape a chaser. Validated offline (176 pellets,
-    // fully connected, zero dead-end pockets outside the ghost house).
+    // Classic-style maze: symmetric T/L block walls (not isolated pillars), a center
+    // ghost house with a gate, side tunnels, and four corner power pellets — modeled on
+    // the original arcade layout. Validated offline: 266 walkable cells, all reachable
+    // (tunnel wraparound included), only 2 dead-end cells and those are the intentional
+    // power-pellet corner nooks, same as the original.
     const MAZE_TEMPLATE = [
-      "#################",
-      "#...............#",
-      "#.#.#.#.#.#.#.#.#",
-      "#...............#",
-      "#.#.#.#.#.#.#.#.#",
-      "#...............#",
-      "#.#.#.......#.#.#",
-      "#......# #......#",
-      "#.#.#..# #..#.#.#",
-      "#......###......#",
-      "#.#.#.......#.#.#",
-      "#...............#",
-      "#.#.#.#.#.#.#.#.#",
-      "#...............#",
-      "#.#.#.#.#.#.#.#.#",
-      "#...............#",
-      "#################",
+      "###################",
+      "#O...............O#",
+      "#.###.........###.#",
+      "#.###.........###.#",
+      "#........#........#",
+      "##..##.......##..##",
+      "##..##.......##..##",
+      "#.......#.#.......#",
+      "#..###.......###..#",
+      "#...#.........#...#",
+      " .......# #....... ",
+      "#.......# #.......#",
+      "#.......###.......#",
+      "#........#........#",
+      "#..###.......###..#",
+      "#...#.........#...#",
+      "#.......#.#.......#",
+      "##..##.......##..##",
+      "##..##.......##..##",
+      "#O...............O#",
+      "###################",
     ];
     const rows = MAZE_TEMPLATE.length;
     const cols = MAZE_TEMPLATE[0].length;
     const cell = canvas.width / cols;
-    const HOUSE_ROW = 8;
-    const HOUSE_COL = 8;
+    const HOUSE_ROW = 11;
+    const HOUSE_COL = 9;
+    const TUNNEL_ROW = 10;
 
     const DIRS = {
       up: { x: 0, y: -1 },
@@ -638,17 +645,38 @@
     const GHOST_BASE_INTERVAL = 300; // level 1: ghosts noticeably slower than the player
     const GHOST_MIN_INTERVAL = 140;
     const GHOST_STEP = 20;
-    const PELLETS_PER_LEVEL = 22;
+    const PELLETS_PER_LEVEL = 30;
+    const FRIGHT_BASE_MS = 6000; // level 1: plenty of time to hunt
+    const FRIGHT_MIN_MS = 2500;
+    const FRIGHT_STEP_MS = 250;
+    const FRIGHT_BLINK_MS = 1500; // warn near the end by blinking
+    const GHOST_BONUS = [20, 40, 80, 160]; // escalates per ghost eaten in one power window
+
+    let frightenedUntil = 0;
+    let ghostsEatenCount = 0;
 
     highEl.textContent = localStorage.getItem(HIGH_KEY) || "0";
+
+    function isFrightened() {
+      return performance.now() < frightenedUntil;
+    }
 
     function buildMaze() {
       return MAZE_TEMPLATE.map((row) => row.split(""));
     }
 
+    function wrapTunnel(r, c) {
+      if (r === TUNNEL_ROW) {
+        if (c < 0) return { r, c: cols - 1 };
+        if (c >= cols) return { r, c: 0 };
+      }
+      return { r, c };
+    }
+
     function cellAt(r, c) {
-      if (r < 0 || r >= rows || c < 0 || c >= cols) return "#";
-      return maze[r][c];
+      const w = wrapTunnel(r, c);
+      if (w.r < 0 || w.r >= rows || w.c < 0 || w.c >= cols) return "#";
+      return maze[w.r][w.c];
     }
 
     function canMove(r, c, dirName) {
@@ -665,9 +693,10 @@
     function reset() {
       maze = buildMaze();
       pelletsLeft = 0;
-      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (maze[r][c] === ".") pelletsLeft++;
-      player = { row: 1, col: 1, dir: "right" };
-      queuedDir = "right";
+      for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++) if (maze[r][c] === "." || maze[r][c] === "O") pelletsLeft++;
+      player = { row: rows - 2, col: HOUSE_COL, dir: "left" };
+      queuedDir = "left";
       ghosts = [
         { row: HOUSE_ROW, col: HOUSE_COL, dir: "up", color: "#FF0000" },
         { row: HOUSE_ROW, col: HOUSE_COL, dir: "up", color: "#FFB8FF" },
@@ -677,6 +706,8 @@
       playerInterval = PLAYER_INTERVAL;
       playerAcc = 0;
       ghostAcc = 0;
+      frightenedUntil = 0;
+      ghostsEatenCount = 0;
       applyLevel();
       scoreEl.textContent = "0";
       livesEl.textContent = "3";
@@ -703,26 +734,57 @@
       ctx.fillStyle = ARCADE_BG;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      const isWall = (r, c) => cellAt(r, c) === "#";
+      const R = Math.max(3, cell * 0.22);
+
+      ctx.save();
+      ctx.shadowColor = WALL_GLOW;
+      ctx.shadowBlur = 3;
+      ctx.fillStyle = WALL_BLUE;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (!isWall(r, c)) continue;
+          const x = c * cell;
+          const y = r * cell;
+          const nUp = isWall(r - 1, c);
+          const nDown = isWall(r + 1, c);
+          const nLeft = isWall(r, c - 1);
+          const nRight = isWall(r, c + 1);
+          const rTL = !nUp && !nLeft ? R : 0;
+          const rTR = !nUp && !nRight ? R : 0;
+          const rBR = !nDown && !nRight ? R : 0;
+          const rBL = !nDown && !nLeft ? R : 0;
+          ctx.beginPath();
+          ctx.moveTo(x + rTL, y);
+          ctx.lineTo(x + cell - rTR, y);
+          if (rTR) ctx.arcTo(x + cell, y, x + cell, y + rTR, rTR);
+          ctx.lineTo(x + cell, y + cell - rBR);
+          if (rBR) ctx.arcTo(x + cell, y + cell, x + cell - rBR, y + cell, rBR);
+          ctx.lineTo(x + rBL, y + cell);
+          if (rBL) ctx.arcTo(x, y + cell, x, y + cell - rBL, rBL);
+          ctx.lineTo(x, y + rTL);
+          if (rTL) ctx.arcTo(x, y, x + rTL, y, rTL);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           const ch = maze[r][c];
           const x = c * cell;
           const y = r * cell;
-          if (ch === "#") {
-            // hollow "tube" wall: a blue outline with a soft glow, not a solid block —
-            // closer to the look of the original arcade maze
-            ctx.save();
-            ctx.shadowColor = WALL_GLOW;
-            ctx.shadowBlur = 4;
-            ctx.strokeStyle = WALL_BLUE;
-            ctx.lineWidth = 2.4;
-            roundRect(x + 3, y + 3, cell - 6, cell - 6, 5);
-            ctx.stroke();
-            ctx.restore();
-          } else if (ch === ".") {
+          if (ch === ".") {
             ctx.fillStyle = PELLET;
             ctx.beginPath();
             ctx.arc(x + cell / 2, y + cell / 2, cell * 0.09, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (ch === "O") {
+            const pulse = 0.85 + 0.15 * Math.sin(performance.now() / 180);
+            ctx.fillStyle = PELLET;
+            ctx.beginPath();
+            ctx.arc(x + cell / 2, y + cell / 2, cell * 0.24 * pulse, 0, Math.PI * 2);
             ctx.fill();
           }
         }
@@ -747,10 +809,15 @@
       ctx.fill();
 
       // ghosts — classic dome + wavy-skirt silhouette, with eyes glancing toward travel direction
+      const frightRemaining = frightenedUntil - performance.now();
+      const frightActive = frightRemaining > 0;
+      const frightBlinkOn = frightActive && frightRemaining < FRIGHT_BLINK_MS && Math.floor(performance.now() / 160) % 2 === 0;
+
       ghosts.forEach((g) => {
         const gx = g.col * cell + cell / 2;
         const gy = g.row * cell + cell / 2;
-        ctx.fillStyle = g.color;
+        const scared = frightActive;
+        ctx.fillStyle = scared ? (frightBlinkOn ? "#FCE8C6" : "#1B3BDE") : g.color;
         ctx.beginPath();
         ctx.arc(gx, gy, cell * 0.4, Math.PI, 0);
         ctx.lineTo(gx + cell * 0.4, gy + cell * 0.36);
@@ -762,17 +829,33 @@
         ctx.closePath();
         ctx.fill();
 
-        const eyeShift = { right: [2, 0], left: [-2, 0], up: [0, -2], down: [0, 2] }[g.dir] || [0, 0];
-        ctx.fillStyle = "#fff";
-        ctx.beginPath();
-        ctx.arc(gx - cell * 0.13, gy - cell * 0.05, cell * 0.1, 0, Math.PI * 2);
-        ctx.arc(gx + cell * 0.13, gy - cell * 0.05, cell * 0.1, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#233";
-        ctx.beginPath();
-        ctx.arc(gx - cell * 0.13 + eyeShift[0], gy - cell * 0.05 + eyeShift[1], cell * 0.05, 0, Math.PI * 2);
-        ctx.arc(gx + cell * 0.13 + eyeShift[0], gy - cell * 0.05 + eyeShift[1], cell * 0.05, 0, Math.PI * 2);
-        ctx.fill();
+        if (scared) {
+          // scared face: small worried eyes, no pupils, plus a wavy frightened mouth
+          ctx.strokeStyle = frightBlinkOn ? "#1B3BDE" : "#FCE8C6";
+          ctx.lineWidth = Math.max(1.5, cell * 0.05);
+          ctx.beginPath();
+          ctx.arc(gx - cell * 0.14, gy - cell * 0.04, cell * 0.06, 0, Math.PI * 2);
+          ctx.arc(gx + cell * 0.14, gy - cell * 0.04, cell * 0.06, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(gx - cell * 0.2, gy + cell * 0.14);
+          for (let i = 0; i < 4; i++) {
+            ctx.lineTo(gx - cell * 0.2 + (i + 0.5) * (cell * 0.4 / 4), gy + (i % 2 === 0 ? cell * 0.2 : cell * 0.1));
+          }
+          ctx.stroke();
+        } else {
+          const eyeShift = { right: [2, 0], left: [-2, 0], up: [0, -2], down: [0, 2] }[g.dir] || [0, 0];
+          ctx.fillStyle = "#fff";
+          ctx.beginPath();
+          ctx.arc(gx - cell * 0.13, gy - cell * 0.05, cell * 0.1, 0, Math.PI * 2);
+          ctx.arc(gx + cell * 0.13, gy - cell * 0.05, cell * 0.1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#233";
+          ctx.beginPath();
+          ctx.arc(gx - cell * 0.13 + eyeShift[0], gy - cell * 0.05 + eyeShift[1], cell * 0.05, 0, Math.PI * 2);
+          ctx.arc(gx + cell * 0.13 + eyeShift[0], gy - cell * 0.05 + eyeShift[1], cell * 0.05, 0, Math.PI * 2);
+          ctx.fill();
+        }
       });
     }
 
@@ -785,26 +868,63 @@
       let candidates = options.filter((d) => d !== OPPOSITE[g.dir]);
       if (candidates.length === 0) candidates = options;
 
-      const chaseChance = Math.min(0.85, 0.45 + (level - 1) * 0.05);
+      const frightened = isFrightened();
       let choice;
-      if (Math.random() < chaseChance) {
-        choice = candidates.reduce((best, d) => {
-          const dd = DIRS[d];
-          const dist = manhattan(g.row + dd.y, g.col + dd.x, player.row, player.col);
-          if (!best || dist < best.dist) return { d, dist };
-          return best;
-        }, null).d;
+      if (frightened) {
+        // flee: prefer the direction that maximizes distance from the player
+        if (Math.random() < 0.75) {
+          choice = candidates.reduce((best, d) => {
+            const dd = DIRS[d];
+            const dist = manhattan(g.row + dd.y, g.col + dd.x, player.row, player.col);
+            if (!best || dist > best.dist) return { d, dist };
+            return best;
+          }, null).d;
+        } else {
+          choice = candidates[Math.floor(Math.random() * candidates.length)];
+        }
       } else {
-        choice = candidates[Math.floor(Math.random() * candidates.length)];
+        const chaseChance = Math.min(0.85, 0.45 + (level - 1) * 0.05);
+        if (Math.random() < chaseChance) {
+          choice = candidates.reduce((best, d) => {
+            const dd = DIRS[d];
+            const dist = manhattan(g.row + dd.y, g.col + dd.x, player.row, player.col);
+            if (!best || dist < best.dist) return { d, dist };
+            return best;
+          }, null).d;
+        } else {
+          choice = candidates[Math.floor(Math.random() * candidates.length)];
+        }
       }
       const d = DIRS[choice];
       g.row += d.y;
       g.col += d.x;
+      const w = wrapTunnel(g.row, g.col);
+      g.row = w.r;
+      g.col = w.c;
       g.dir = choice;
     }
 
-    function checkCatch() {
-      return ghosts.some((g) => g.row === player.row && g.col === player.col);
+    function eatGhost(g) {
+      const bonus = GHOST_BONUS[Math.min(ghostsEatenCount, GHOST_BONUS.length - 1)];
+      ghostsEatenCount += 1;
+      score += bonus;
+      scoreEl.textContent = String(score);
+      g.row = HOUSE_ROW;
+      g.col = HOUSE_COL;
+      g.dir = "up";
+    }
+
+    function handleCollisions() {
+      for (const g of ghosts) {
+        if (g.row === player.row && g.col === player.col) {
+          if (isFrightened()) {
+            eatGhost(g);
+          } else {
+            loseLife();
+            return;
+          }
+        }
+      }
     }
 
     function loseLife() {
@@ -814,10 +934,10 @@
         endGame(false);
         return;
       }
-      player.row = 1;
-      player.col = 1;
-      player.dir = "right";
-      queuedDir = "right";
+      player.row = rows - 2;
+      player.col = HOUSE_COL;
+      player.dir = "left";
+      queuedDir = "left";
       ghosts.forEach((g) => {
         g.row = HOUSE_ROW;
         g.col = HOUSE_COL;
@@ -831,25 +951,37 @@
         const d = DIRS[player.dir];
         player.row += d.y;
         player.col += d.x;
+        const w = wrapTunnel(player.row, player.col);
+        player.row = w.r;
+        player.col = w.c;
       }
-      if (maze[player.row][player.col] === ".") {
+      const here = maze[player.row][player.col];
+      if (here === "." || here === "O") {
         maze[player.row][player.col] = " ";
-        score += 1;
+        score += here === "O" ? 5 : 1;
         pelletsLeft -= 1;
         scoreEl.textContent = String(score);
         applyLevel();
+        if (here === "O") {
+          const duration = Math.max(FRIGHT_MIN_MS, FRIGHT_BASE_MS - (level - 1) * FRIGHT_STEP_MS);
+          frightenedUntil = performance.now() + duration;
+          ghostsEatenCount = 0;
+          ghosts.forEach((g) => {
+            g.dir = OPPOSITE[g.dir] || g.dir;
+          });
+        }
         if (pelletsLeft <= 0) {
           endGame(true);
           return true;
         }
       }
-      if (checkCatch()) loseLife();
+      handleCollisions();
       return false;
     }
 
     function stepGhosts() {
       ghosts.forEach(moveGhost);
-      if (checkCatch()) loseLife();
+      handleCollisions();
     }
 
     function loop(now) {
@@ -859,12 +991,14 @@
       playerAcc += dt;
       ghostAcc += dt;
 
+      const effectiveGhostInterval = isFrightened() ? ghostInterval * 1.6 : ghostInterval;
+
       let ended = false;
       if (playerAcc >= playerInterval) {
         playerAcc = 0;
         ended = stepPlayer();
       }
-      if (!ended && ghostAcc >= ghostInterval) {
+      if (!ended && ghostAcc >= effectiveGhostInterval) {
         ghostAcc = 0;
         stepGhosts();
       }

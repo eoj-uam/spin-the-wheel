@@ -12,6 +12,27 @@
   };
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
+      document.querySelectorAll(".game-stage.immersive").forEach((stage) => {
+        stage.classList.remove("immersive");
+        const wrap = stage.querySelector(".game-canvas-wrap");
+        if (wrap) {
+          wrap.style.width = "";
+          wrap.style.height = "";
+        }
+        const btn = stage.querySelector(".fullscreen-btn");
+        if (btn) {
+          btn.textContent = "⛶";
+          btn.setAttribute("aria-label", "Fullscreen");
+        }
+        if (stage._immersiveRefit) {
+          window.removeEventListener("resize", stage._immersiveRefit);
+          window.removeEventListener("orientationchange", stage._immersiveRefit);
+          stage._immersiveRefit = null;
+        }
+      });
+      document.body.classList.remove("game-immersive-active");
+      if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+
       tabs.forEach((t) => t.setAttribute("aria-selected", "false"));
       tab.setAttribute("aria-selected", "true");
       Object.values(panels).forEach((p) => p.classList.remove("active"));
@@ -176,15 +197,17 @@
     canvas.addEventListener(
       "touchstart",
       (e) => {
+        e.preventDefault();
         const t = e.touches[0];
         touchStartX = t.clientX;
         touchStartY = t.clientY;
       },
-      { passive: true }
+      { passive: false }
     );
     canvas.addEventListener(
       "touchend",
       (e) => {
+        e.preventDefault();
         if (!running) return;
         const t = e.changedTouches[0];
         const dx = t.clientX - touchStartX;
@@ -196,7 +219,7 @@
         if (nd.x === -dir.x && nd.y === -dir.y) return;
         nextDir = nd;
       },
-      { passive: true }
+      { passive: false }
     );
 
     // Touch: on-screen D-pad
@@ -388,9 +411,10 @@
     canvas.addEventListener(
       "touchstart",
       (e) => {
+        e.preventDefault();
         moveToTouch(e.touches[0].clientX);
       },
-      { passive: true }
+      { passive: false }
     );
     canvas.addEventListener(
       "touchmove",
@@ -1052,15 +1076,17 @@
     canvas.addEventListener(
       "touchstart",
       (e) => {
+        e.preventDefault();
         const t = e.touches[0];
         touchStartX = t.clientX;
         touchStartY = t.clientY;
       },
-      { passive: true }
+      { passive: false }
     );
     canvas.addEventListener(
       "touchend",
       (e) => {
+        e.preventDefault();
         if (!running) return;
         const t = e.changedTouches[0];
         const dx = t.clientX - touchStartX;
@@ -1068,7 +1094,7 @@
         if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
         queuedDir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
       },
-      { passive: true }
+      { passive: false }
     );
 
     // Touch: on-screen D-pad
@@ -1251,5 +1277,117 @@
 
     reset();
     draw(1);
+  })();
+
+  /* =========================================================
+     Immersive fullscreen mode — shared across all games.
+     On touch devices, starting a game automatically expands it to
+     cover the viewport (nav/hero hidden, canvas and controls scaled
+     up) so it feels like a mobile game rather than a shrunk desktop
+     widget. A manual toggle button works the same way on any device.
+     ========================================================= */
+  (function immersiveMode() {
+    const isTouch = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+
+    function fitCanvas(stage, aspect) {
+      const wrap = stage.querySelector(".game-canvas-wrap");
+      if (!wrap) return;
+      const hud = stage.querySelector(".game-hud");
+      const controls = stage.querySelector(".touch-dpad, .touch-lr");
+      const reserved =
+        (hud ? hud.getBoundingClientRect().height : 0) +
+        (controls ? controls.getBoundingClientRect().height : 0) +
+        140; // spin/start button + gaps + safe-area padding allowance
+      const availH = window.innerHeight - reserved;
+      const availW = window.innerWidth * 0.95;
+      let w = availW;
+      let h = w / aspect;
+      if (h > availH) {
+        h = Math.max(220, availH);
+        w = h * aspect;
+      }
+      wrap.style.width = Math.round(w) + "px";
+      wrap.style.height = Math.round(h) + "px";
+    }
+
+    function clearFit(stage) {
+      const wrap = stage.querySelector(".game-canvas-wrap");
+      if (wrap) {
+        wrap.style.width = "";
+        wrap.style.height = "";
+      }
+    }
+
+    function enter(stage, aspect, btn) {
+      stage.classList.add("immersive");
+      document.body.classList.add("game-immersive-active");
+      btn.textContent = "✕";
+      btn.setAttribute("aria-label", "Exit fullscreen");
+      fitCanvas(stage, aspect);
+      const refit = () => fitCanvas(stage, aspect);
+      stage._immersiveRefit = refit;
+      window.addEventListener("resize", refit);
+      window.addEventListener("orientationchange", refit);
+      if (stage.requestFullscreen) {
+        stage.requestFullscreen().catch(() => {});
+      }
+    }
+
+    function exit(stage, btn) {
+      stage.classList.remove("immersive");
+      document.body.classList.remove("game-immersive-active");
+      btn.textContent = "⛶";
+      btn.setAttribute("aria-label", "Fullscreen");
+      clearFit(stage);
+      if (stage._immersiveRefit) {
+        window.removeEventListener("resize", stage._immersiveRefit);
+        window.removeEventListener("orientationchange", stage._immersiveRefit);
+        stage._immersiveRefit = null;
+      }
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    document.querySelectorAll(".game-stage").forEach((stage) => {
+      const aspect = parseFloat(stage.dataset.aspect || "1");
+      const btn = stage.querySelector(".fullscreen-btn");
+      if (!btn) return;
+
+      btn.addEventListener("click", () => {
+        if (stage.classList.contains("immersive")) exit(stage, btn);
+        else enter(stage, aspect, btn);
+      });
+
+      // Auto-enter immersive mode the first time a touch user hits Start
+      if (isTouch) {
+        const startBtn = stage.querySelector(".game-overlay .spin-btn");
+        if (startBtn) {
+          startBtn.addEventListener("click", () => {
+            if (!stage.classList.contains("immersive")) enter(stage, aspect, btn);
+          });
+        }
+      }
+    });
+
+    // If the user exits native fullscreen via the OS/back gesture, unwind our state too
+    document.addEventListener("fullscreenchange", () => {
+      if (!document.fullscreenElement) {
+        document.querySelectorAll(".game-stage.immersive").forEach((stage) => {
+          const btn = stage.querySelector(".fullscreen-btn");
+          if (btn) exit(stage, btn);
+        });
+      }
+    });
+
+    // Escape key exits immersive mode too (keyboard users testing on desktop)
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        document.querySelectorAll(".game-stage.immersive").forEach((stage) => {
+          const btn = stage.querySelector(".fullscreen-btn");
+          if (btn) exit(stage, btn);
+        });
+      }
+    });
   })();
 })();

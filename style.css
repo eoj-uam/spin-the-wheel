@@ -729,12 +729,17 @@ footer{
   background: var(--bg);
 }
 .game-canvas-wrap.tall{ aspect-ratio: 3 / 4; }
+.game-canvas-wrap.pacman-board{ aspect-ratio: 19 / 21; background: #0A0A18; }
 .game-canvas-wrap canvas{
   width: 100%;
   height: 100%;
   display: block;
   cursor: pointer;
   touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .game-hud{
   display: flex;
@@ -766,6 +771,10 @@ footer{
   box-shadow: var(--shadow);
   color: var(--ink);
   touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .touch-dpad .up{ grid-area: up; }
 .touch-dpad .down{ grid-area: down; }
@@ -790,12 +799,81 @@ footer{
   box-shadow: var(--shadow);
   color: var(--ink);
   touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.spin-btn, .games-tab, .preset-chip, .btn-secondary{
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
 @media (hover: none) and (pointer: coarse){
   .touch-dpad{ display: grid; }
   .touch-lr{ display: flex; }
 }
+
+/* ---------- Fullscreen / immersive mobile mode ---------- */
+.fullscreen-btn{
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 6;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 1.05rem;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.game-immersive-active{
+  overflow: hidden;
+}
+
+.game-stage.immersive{
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  width: 100vw;
+  height: 100dvh;
+  border-radius: 0;
+  box-shadow: none;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  gap: 16px;
+  touch-action: none;
+}
+.game-stage.immersive .game-hud{
+  font-size: 1.05rem;
+  gap: 30px;
+}
+.game-stage.immersive .game-hud .stat .n{ font-size: 1.5rem; }
+.game-stage.immersive .game-canvas-wrap{
+  width: auto;
+  height: auto;
+  max-width: none;
+  flex: none;
+}
+.game-stage.immersive .touch-dpad{
+  grid-template-columns: 64px 64px 64px;
+  grid-template-rows: 64px 64px 64px;
+  gap: 10px;
+}
+.game-stage.immersive .touch-dpad button{ font-size: 1.6rem; }
+.game-stage.immersive .touch-lr{ max-width: 460px; }
+.game-stage.immersive .touch-lr button{ padding: 22px; font-size: 1.7rem; }
+.game-stage.immersive .spin-btn{ padding: 18px 44px; font-size: 1.05rem; }
+.game-stage.immersive .game-overlay{ border-radius: 0; }
 
 .game-overlay{
   position: absolute;

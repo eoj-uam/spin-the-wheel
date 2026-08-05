@@ -191,23 +191,30 @@
       }
     });
 
-    // Touch: swipe on the board to steer
+    // Touch: swipe anywhere in the game area (not just on the snake itself) so a
+    // player's thumb never has to cover the board to steer. Taps on buttons are
+    // ignored here so the D-pad, fullscreen toggle, and start button still work.
+    const stage = canvas.closest(".game-stage");
     let touchStartX = 0;
     let touchStartY = 0;
-    canvas.addEventListener(
+    let swipeTouchActive = false;
+    (stage || canvas).addEventListener(
       "touchstart",
       (e) => {
-        e.preventDefault();
+        if (e.target.closest("button")) return;
+        swipeTouchActive = true;
         const t = e.touches[0];
         touchStartX = t.clientX;
         touchStartY = t.clientY;
+        e.preventDefault();
       },
       { passive: false }
     );
-    canvas.addEventListener(
+    (stage || canvas).addEventListener(
       "touchend",
       (e) => {
-        e.preventDefault();
+        if (!swipeTouchActive) return;
+        swipeTouchActive = false;
         if (!running) return;
         const t = e.changedTouches[0];
         const dx = t.clientX - touchStartX;
@@ -222,7 +229,7 @@
       { passive: false }
     );
 
-    // Touch: on-screen D-pad
+    // Touch: on-screen D-pad — the primary, unobstructed way to steer
     const dpad = document.getElementById("snakeDpad");
     if (dpad) {
       const dirMap = {
@@ -235,6 +242,7 @@
         const nd = dirMap[btn.dataset.dir];
         const handler = (e) => {
           e.preventDefault();
+          e.stopPropagation();
           if (!running) return;
           if (nd.x === -dir.x && nd.y === -dir.y) return;
           nextDir = nd;
@@ -401,26 +409,31 @@
       if (key === "arrowright" || key === "d") keys.right = false;
     });
 
-    // Touch: drag directly on the board to move the cart
+    // Touch: drag anywhere in the game area to move the cart — mapped against the
+    // canvas's horizontal bounds, but the touch itself doesn't need to be on the
+    // canvas, so a thumb can stay clear of the falling wedges while still steering.
+    const stage = canvas.closest(".game-stage");
     function moveToTouch(clientX) {
       const rect = canvas.getBoundingClientRect();
       const scaleX = W / rect.width;
       const x = (clientX - rect.left) * scaleX;
       playerX = Math.max(0, Math.min(W - playerW, x - playerW / 2));
     }
-    canvas.addEventListener(
+    (stage || canvas).addEventListener(
       "touchstart",
       (e) => {
-        e.preventDefault();
+        if (e.target.closest("button")) return;
         moveToTouch(e.touches[0].clientX);
+        e.preventDefault();
       },
       { passive: false }
     );
-    canvas.addEventListener(
+    (stage || canvas).addEventListener(
       "touchmove",
       (e) => {
-        e.preventDefault();
+        if (e.target.closest("button")) return;
         moveToTouch(e.touches[0].clientX);
+        e.preventDefault();
       },
       { passive: false }
     );
@@ -432,6 +445,7 @@
         const side = btn.dataset.dir;
         const setState = (val) => (e) => {
           e.preventDefault();
+          e.stopPropagation();
           keys[side] = val;
         };
         btn.addEventListener("touchstart", setState(true), { passive: false });
@@ -666,9 +680,9 @@
     let playerAcc, ghostAcc, playerInterval, ghostInterval, lastTime, running, queuedDir;
 
     const PLAYER_INTERVAL = 150; // constant — player speed stays predictable
-    const GHOST_BASE_INTERVAL = 300; // level 1: ghosts noticeably slower than the player
-    const GHOST_MIN_INTERVAL = 140;
-    const GHOST_STEP = 20;
+    const GHOST_BASE_INTERVAL = 440; // level 1: ghosts move much slower than the player
+    const GHOST_MIN_INTERVAL = 130;
+    const GHOST_STEP = 14;
     const PELLETS_PER_LEVEL = 30;
     const FRIGHT_BASE_MS = 6000; // level 1: plenty of time to hunt
     const FRIGHT_MIN_MS = 2500;
@@ -907,7 +921,7 @@
           choice = candidates[Math.floor(Math.random() * candidates.length)];
         }
       } else {
-        const chaseChance = Math.min(0.85, 0.45 + (level - 1) * 0.05);
+        const chaseChance = Math.min(0.85, 0.3 + (level - 1) * 0.04);
         if (Math.random() < chaseChance) {
           choice = candidates.reduce((best, d) => {
             const dd = DIRS[d];
@@ -1070,23 +1084,30 @@
       }
     });
 
-    // Touch: swipe on the board
+    // Touch: swipe anywhere in the game area (not just on the maze itself) so a
+    // player's thumb never has to cover the board to steer. Taps on buttons are
+    // ignored here so the D-pad, fullscreen toggle, and start button still work.
+    const stage = canvas.closest(".game-stage");
     let touchStartX = 0;
     let touchStartY = 0;
-    canvas.addEventListener(
+    let swipeTouchActive = false;
+    (stage || canvas).addEventListener(
       "touchstart",
       (e) => {
-        e.preventDefault();
+        if (e.target.closest("button")) return;
+        swipeTouchActive = true;
         const t = e.touches[0];
         touchStartX = t.clientX;
         touchStartY = t.clientY;
+        e.preventDefault();
       },
       { passive: false }
     );
-    canvas.addEventListener(
+    (stage || canvas).addEventListener(
       "touchend",
       (e) => {
-        e.preventDefault();
+        if (!swipeTouchActive) return;
+        swipeTouchActive = false;
         if (!running) return;
         const t = e.changedTouches[0];
         const dx = t.clientX - touchStartX;
@@ -1097,13 +1118,14 @@
       { passive: false }
     );
 
-    // Touch: on-screen D-pad
+    // Touch: on-screen D-pad — the primary, unobstructed way to steer
     const dpad = document.getElementById("pacmanDpad");
     if (dpad) {
       dpad.querySelectorAll("button").forEach((btn) => {
         const nd = btn.dataset.dir;
         const handler = (e) => {
           e.preventDefault();
+          e.stopPropagation();
           if (!running) return;
           queuedDir = nd;
         };

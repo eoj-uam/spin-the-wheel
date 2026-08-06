@@ -633,42 +633,39 @@
     const highEl = document.getElementById("pacmanHigh");
     const HIGH_KEY = "stw_hs_pacman";
 
-    // Proper corridor-generated maze: built from a randomized spanning-tree algorithm
-    // on a sub-grid (not hand-placed blocks), so every passage is exactly one tile
-    // wide by construction — no two pellet lines ever run adjacent to each other.
-    // A few extra loop connections were added afterward to remove dead ends, then
-    // mirrored for left-right symmetry. Validated offline: 218 walkable cells, all
-    // reachable (including tunnel wraparound), zero 2x2 open blocks, zero dead ends
-    // outside the ghost house/tunnel mouths, fully left-right symmetric.
+    // A simpler, asymmetric, organic maze — generated the same corridor-safe way as
+    // before (one-tile-wide passages by construction, zero 2x2 open blocks) but
+    // without left-right mirroring this time, for a looser, less rigid layout. Fewer
+    // walls, more breathing room. Validated offline: 181 walkable cells, all reachable
+    // (tunnel wraparound included), zero 2x2 open blocks, zero dead ends outside the
+    // ghost house door and tunnel mouths.
     const MAZE_TEMPLATE = [
-      "#####################",
-      "#O..#.....#.....#..O#",
-      "#.#.#.#.#.#.#.#.#.#.#",
-      "#...#.#.#...#.#.#...#",
-      "#.###.#.#.#.#.#.###.#",
-      "#.#...#.#.#.#.#...#.#",
-      "#.#.###.#.#.#.###.#.#",
-      "#.#.#...#.#.#...#.#.#",
-      "#.#.#.##.....##.#.#.#",
-      "#.#...#..# #..#...#.#",
-      " ...#.#.## ##.#.#... ",
-      "#.#...#...#...#...#.#",
-      "#.#.#####.#.#####.#.#",
-      "#.#.....#.#.#.....#.#",
-      "#.###.#.#.#.#.#.###.#",
-      "#...#.#.#.#.#.#.#...#",
-      "###.#.#.#.#.#.#.#.###",
-      "#...#.#.......#.#...#",
-      "#.#.#.#########.#.#.#",
-      "#O.................O#",
-      "#####################",
+      "###################",
+      "#O......#.........#",
+      "#.#####.#.#.###.#.#",
+      "#.....#...#.....#.#",
+      "#.#.#.#.###.#.#.#.#",
+      "#.#.#.....#.#...#.#",
+      "#.#.###.#.#.#.#.#.#",
+      "#...#...#.....#...#",
+      "#.###.#.# #####.#.#",
+      " ...#...# #...#... ",
+      "#.#.#.#####.#.#.#.#",
+      "#.#.#.#.....#.....#",
+      "#.#.#.#.#.#.###.#.#",
+      "#.......#.....#.#.#",
+      "#.###.#######.#.#.#",
+      "#.#...#.......#...#",
+      "#.#.#.#.#########.#",
+      "#.....#..........O#",
+      "###################",
     ];
     const rows = MAZE_TEMPLATE.length;
     const cols = MAZE_TEMPLATE[0].length;
     const cell = canvas.width / cols;
-    const HOUSE_ROW = 10;
-    const HOUSE_COL = 10;
-    const TUNNEL_ROW = 10;
+    const HOUSE_ROW = 9;
+    const HOUSE_COL = 9;
+    const TUNNEL_ROW = 9;
 
     const DIRS = {
       up: { x: 0, y: -1 },
@@ -685,12 +682,12 @@
     const GHOST_BASE_INTERVAL = 440; // level 1: ghosts move much slower than the player
     const GHOST_MIN_INTERVAL = 130;
     const GHOST_STEP = 14;
-    const PELLETS_PER_LEVEL = 30;
     const FRIGHT_BASE_MS = 6000; // level 1: plenty of time to hunt
     const FRIGHT_MIN_MS = 2500;
     const FRIGHT_STEP_MS = 250;
     const FRIGHT_BLINK_MS = 1500; // warn near the end by blinking
     const GHOST_BONUS = [20, 40, 80, 160]; // escalates per ghost eaten in one power window
+    const LEVEL_TRANSITION_MS = 1500;
 
     let frightenedUntil = 0;
     let ghostsEatenCount = 0;
@@ -724,33 +721,62 @@
       return cellAt(r + d.y, c + d.x) !== "#";
     }
 
+    // Ghost pace is driven purely by the level number — clearing the board is what
+    // advances it, not score, so a level always starts at a known, fair difficulty.
     function applyLevel() {
-      level = 1 + Math.floor(score / PELLETS_PER_LEVEL);
       ghostInterval = Math.max(GHOST_MIN_INTERVAL, GHOST_BASE_INTERVAL - (level - 1) * GHOST_STEP);
       levelEl.textContent = String(level);
     }
 
-    function reset() {
+    function refillMaze() {
       maze = buildMaze();
       pelletsLeft = 0;
       for (let r = 0; r < rows; r++)
         for (let c = 0; c < cols; c++) if (maze[r][c] === "." || maze[r][c] === "O") pelletsLeft++;
+    }
+
+    function resetPositions() {
       player = { row: rows - 2, col: HOUSE_COL, dir: "left" };
       queuedDir = "left";
       ghosts = [
         { row: HOUSE_ROW, col: HOUSE_COL, dir: "up", color: "#FF0000" },
         { row: HOUSE_ROW, col: HOUSE_COL, dir: "up", color: "#FFB8FF" },
       ];
-      score = 0;
-      lives = 3;
-      playerInterval = PLAYER_INTERVAL;
       playerAcc = 0;
       ghostAcc = 0;
       frightenedUntil = 0;
       ghostsEatenCount = 0;
+    }
+
+    function reset() {
+      level = 1;
+      score = 0;
+      lives = 3;
+      playerInterval = PLAYER_INTERVAL;
+      refillMaze();
+      resetPositions();
       applyLevel();
       scoreEl.textContent = "0";
       livesEl.textContent = "3";
+    }
+
+    // Clearing the board doesn't end the game — it refills the maze, keeps score and
+    // lives, speeds the ghosts up a notch, and shows a brief "Level up" pause.
+    function advanceLevel() {
+      running = false;
+      level += 1;
+      refillMaze();
+      resetPositions();
+      applyLevel();
+      draw();
+      overlay.classList.remove("hidden");
+      overlay.innerHTML = `<h3>Level ${level}</h3><p>Maze cleared — here come the inspectors again.</p>`;
+      setTimeout(() => {
+        overlay.classList.add("hidden");
+        running = true;
+        lastTime = performance.now();
+        requestAnimationFrame(loop);
+      }, LEVEL_TRANSITION_MS);
     }
 
     function roundRect(x, y, w, h, r) {
@@ -971,7 +997,7 @@
       lives -= 1;
       livesEl.textContent = String(Math.max(0, lives));
       if (lives <= 0) {
-        endGame(false);
+        endGame();
         return;
       }
       player.row = rows - 2;
@@ -1001,7 +1027,6 @@
         score += here === "O" ? 5 : 1;
         pelletsLeft -= 1;
         scoreEl.textContent = String(score);
-        applyLevel();
         if (here === "O") {
           const duration = Math.max(FRIGHT_MIN_MS, FRIGHT_BASE_MS - (level - 1) * FRIGHT_STEP_MS);
           frightenedUntil = performance.now() + duration;
@@ -1011,7 +1036,7 @@
           });
         }
         if (pelletsLeft <= 0) {
-          endGame(true);
+          advanceLevel();
           return true;
         }
       }
@@ -1048,16 +1073,14 @@
       }
     }
 
-    function endGame(won) {
+    function endGame() {
       running = false;
       const best = Number(localStorage.getItem(HIGH_KEY) || "0");
       if (score > best) localStorage.setItem(HIGH_KEY, String(score));
       highEl.textContent = localStorage.getItem(HIGH_KEY);
       draw();
       overlay.classList.remove("hidden");
-      overlay.innerHTML = won
-        ? `<h3>Maze cleared!</h3><p>Score: ${score}</p><button type="button" class="spin-btn" id="pacmanStart" style="margin-top:6px;">PLAY AGAIN</button>`
-        : `<h3>Caught!</h3><p>Score: ${score}</p><button type="button" class="spin-btn" id="pacmanStart" style="margin-top:6px;">PLAY AGAIN</button>`;
+      overlay.innerHTML = `<h3>Caught!</h3><p>Score: ${score} · Reached level ${level}</p><button type="button" class="spin-btn" id="pacmanStart" style="margin-top:6px;">PLAY AGAIN</button>`;
       document.getElementById("pacmanStart").addEventListener("click", start);
     }
 

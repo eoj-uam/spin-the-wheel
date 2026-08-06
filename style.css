@@ -729,7 +729,7 @@ footer{
   background: var(--bg);
 }
 .game-canvas-wrap.tall{ aspect-ratio: 3 / 4; }
-.game-canvas-wrap.pacman-board{ aspect-ratio: 19 / 21; background: #0A0A18; }
+.game-canvas-wrap.pacman-board{ aspect-ratio: 1 / 1; background: #0A0A18; }
 .game-canvas-wrap canvas{
   width: 100%;
   height: 100%;

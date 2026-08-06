@@ -633,39 +633,41 @@
     const highEl = document.getElementById("pacmanHigh");
     const HIGH_KEY = "stw_hs_pacman";
 
-    // Classic-style maze: symmetric T/L block walls (not isolated pillars), a center
-    // ghost house with a gate, side tunnels, and four corner power pellets — modeled on
-    // the original arcade layout. Validated offline: 266 walkable cells, all reachable
-    // (tunnel wraparound included), only 2 dead-end cells and those are the intentional
-    // power-pellet corner nooks, same as the original.
+    // Proper corridor-generated maze: built from a randomized spanning-tree algorithm
+    // on a sub-grid (not hand-placed blocks), so every passage is exactly one tile
+    // wide by construction — no two pellet lines ever run adjacent to each other.
+    // A few extra loop connections were added afterward to remove dead ends, then
+    // mirrored for left-right symmetry. Validated offline: 218 walkable cells, all
+    // reachable (including tunnel wraparound), zero 2x2 open blocks, zero dead ends
+    // outside the ghost house/tunnel mouths, fully left-right symmetric.
     const MAZE_TEMPLATE = [
-      "###################",
-      "#O...............O#",
-      "#.###.........###.#",
-      "#.###.........###.#",
-      "#........#........#",
-      "##..##.......##..##",
-      "##..##.......##..##",
-      "#.......#.#.......#",
-      "#..###.......###..#",
-      "#...#.........#...#",
-      " .......# #....... ",
-      "#.......# #.......#",
-      "#.......###.......#",
-      "#........#........#",
-      "#..###.......###..#",
-      "#...#.........#...#",
-      "#.......#.#.......#",
-      "##..##.......##..##",
-      "##..##.......##..##",
-      "#O...............O#",
-      "###################",
+      "#####################",
+      "#O..#.....#.....#..O#",
+      "#.#.#.#.#.#.#.#.#.#.#",
+      "#...#.#.#...#.#.#...#",
+      "#.###.#.#.#.#.#.###.#",
+      "#.#...#.#.#.#.#...#.#",
+      "#.#.###.#.#.#.###.#.#",
+      "#.#.#...#.#.#...#.#.#",
+      "#.#.#.##.....##.#.#.#",
+      "#.#...#..# #..#...#.#",
+      " ...#.#.## ##.#.#... ",
+      "#.#...#...#...#...#.#",
+      "#.#.#####.#.#####.#.#",
+      "#.#.....#.#.#.....#.#",
+      "#.###.#.#.#.#.#.###.#",
+      "#...#.#.#.#.#.#.#...#",
+      "###.#.#.#.#.#.#.#.###",
+      "#...#.#.......#.#...#",
+      "#.#.#.#########.#.#.#",
+      "#O.................O#",
+      "#####################",
     ];
     const rows = MAZE_TEMPLATE.length;
     const cols = MAZE_TEMPLATE[0].length;
     const cell = canvas.width / cols;
-    const HOUSE_ROW = 11;
-    const HOUSE_COL = 9;
+    const HOUSE_ROW = 10;
+    const HOUSE_COL = 10;
     const TUNNEL_ROW = 10;
 
     const DIRS = {

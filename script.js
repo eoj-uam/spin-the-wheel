@@ -136,65 +136,67 @@
 
     const bandpass = actx.createBiquadFilter();
     bandpass.type = "bandpass";
-    bandpass.frequency.value = 650 + progress * 900;
-    bandpass.Q.value = 2.2;
+    bandpass.frequency.value = 550 + progress * 650;
+    bandpass.Q.value = 5.5;
 
     const lowpass = actx.createBiquadFilter();
     lowpass.type = "lowpass";
-    lowpass.frequency.value = 2200;
+    lowpass.frequency.value = 1500;
 
     const gain = actx.createGain();
     gain.gain.setValueAtTime(0.0001, t0);
-    gain.gain.linearRampToValueAtTime(0.32, t0 + 0.004);
-    gain.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.05);
+    gain.gain.linearRampToValueAtTime(0.16, t0 + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0006, t0 + 0.045);
 
     noise.connect(bandpass).connect(lowpass).connect(gain).connect(bus);
     noise.start(t0);
-    noise.stop(t0 + 0.06);
+    noise.stop(t0 + 0.05);
 
-    // a soft low knock underneath, giving the click some roundness without any edge
+    // a soft low knock underneath, giving the click its body — this now carries
+    // more of the sound than the noise layer, which is what takes the rasp out
     const knock = actx.createOscillator();
     const knockGain = actx.createGain();
     knock.type = "sine";
-    knock.frequency.setValueAtTime(150, t0);
-    knock.frequency.exponentialRampToValueAtTime(80, t0 + 0.05);
+    knock.frequency.setValueAtTime(160, t0);
+    knock.frequency.exponentialRampToValueAtTime(85, t0 + 0.05);
     knockGain.gain.setValueAtTime(0.0001, t0);
-    knockGain.gain.linearRampToValueAtTime(0.09, t0 + 0.006);
-    knockGain.gain.exponentialRampToValueAtTime(0.0006, t0 + 0.06);
+    knockGain.gain.linearRampToValueAtTime(0.15, t0 + 0.007);
+    knockGain.gain.exponentialRampToValueAtTime(0.0006, t0 + 0.065);
     knock.connect(knockGain).connect(bus);
     knock.start(t0);
-    knock.stop(t0 + 0.065);
+    knock.stop(t0 + 0.07);
   }
 
-  // One strike of a mellow bell: a fundamental plus a few soft inharmonic partials,
-  // each rounded off with its own lowpass so the tone stays warm instead of glassy.
-  function strikeBell(actx, time, freq, peakGain) {
+  // One pure, bell-like note — a fundamental plus soft, harmonically-related
+  // overtones (not inharmonic like a real struck bell), which is what makes it read
+  // as warm and musical rather than metallic. Closer to a celesta or glockenspiel.
+  function playChimeNote(actx, time, freq, peakGain, decay) {
     const bus = getMasterBus(actx);
     const partials = [
-      { ratio: 1, amp: 1, decay: 1.0, cutoff: 2600 },
-      { ratio: 2.4, amp: 0.4, decay: 0.7, cutoff: 3200 },
-      { ratio: 3.9, amp: 0.2, decay: 0.5, cutoff: 3600 },
-      { ratio: 5.6, amp: 0.1, decay: 0.35, cutoff: 4000 },
+      { ratio: 1, amp: 1 },
+      { ratio: 2, amp: 0.22 },
+      { ratio: 4, amp: 0.06 },
     ];
     partials.forEach((p) => {
       const osc = actx.createOscillator();
       const gain = actx.createGain();
       const lp = actx.createBiquadFilter();
       lp.type = "lowpass";
-      lp.frequency.value = p.cutoff;
+      lp.frequency.value = 3800;
       osc.type = "sine";
       osc.frequency.value = freq * p.ratio;
       gain.gain.setValueAtTime(0.0001, time);
       gain.gain.linearRampToValueAtTime(peakGain * p.amp, time + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0004, time + p.decay);
+      gain.gain.exponentialRampToValueAtTime(0.0004, time + decay);
       osc.connect(lp).connect(gain).connect(bus);
       osc.start(time);
-      osc.stop(time + p.decay + 0.05);
+      osc.stop(time + decay + 0.05);
     });
   }
 
-  // Jackpot payoff: a soft low thump, then a mellow bell rung three times —
-  // rounded and warm rather than bright and clangy.
+  // Jackpot payoff: a soft low thump, then a short ascending 4-note phrase in a
+  // warm, pure timbre — a little melodic "reward" cue rather than a bell ring —
+  // with a quiet high sparkle layered under the final note.
   function playWinFanfare() {
     if (!soundOn) return;
     const actx = getAudioCtx();
@@ -215,9 +217,30 @@
     thump.start(t0);
     thump.stop(t0 + 0.29);
 
-    // three soft bell strikes, mellow "ding-ding-ding", each a touch gentler than the last
-    const ringTimes = [t0 + 0.1, t0 + 0.34, t0 + 0.58];
-    ringTimes.forEach((t, i) => strikeBell(actx, t, 1046.5 * (1 + i * 0.01), 0.34 - i * 0.05));
+    // a short, pleasant ascending phrase — C5, E5, G5, C6 — each note a touch
+    // brighter than the last, resolving on the octave for a satisfied, "done" feel
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    const noteTimes = [t0 + 0.1, t0 + 0.24, t0 + 0.38, t0 + 0.54];
+    notes.forEach((freq, i) => {
+      const isLast = i === notes.length - 1;
+      playChimeNote(actx, noteTimes[i], freq, isLast ? 0.3 : 0.22, isLast ? 1.1 : 0.4);
+    });
+
+    // a quiet high sparkle under the final note for a little extra shimmer
+    const sparkleTime = noteTimes[noteTimes.length - 1] + 0.05;
+    [2093, 2637, 3136].forEach((freq, i) => {
+      const t = sparkleTime + i * 0.045;
+      const osc = actx.createOscillator();
+      const gain = actx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.linearRampToValueAtTime(0.05, t + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0003, t + 0.5);
+      osc.connect(gain).connect(bus);
+      osc.start(t);
+      osc.stop(t + 0.55);
+    });
   }
 
   /* ---------------- Parsing ---------------- */

@@ -6,7 +6,7 @@
   const panels = {
     snake: document.getElementById("panel-snake"),
     dodge: document.getElementById("panel-dodge"),
-    whack: document.getElementById("panel-whack"),
+    slice: document.getElementById("panel-slice"),
     pacman: document.getElementById("panel-pacman"),
     flyer: document.getElementById("panel-flyer"),
   };
@@ -462,145 +462,345 @@
   })();
 
   /* =========================================================
-     GAME 3 — Whack the Prize
+     GAME 3 — Ticket Slice (swipe-to-slice, Fruit-Ninja style)
      ========================================================= */
-  (function whackGame() {
-    const canvas = document.getElementById("whackCanvas");
+  (function sliceGame() {
+    const canvas = document.getElementById("sliceCanvas");
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
-    const overlay = document.getElementById("whackOverlay");
-    const startBtn = document.getElementById("whackStart");
-    const scoreEl = document.getElementById("whackScore");
-    const levelEl = document.getElementById("whackLevel");
-    const timeEl = document.getElementById("whackTime");
-    const highEl = document.getElementById("whackHigh");
-    const HIGH_KEY = "stw_hs_whack";
+    const overlay = document.getElementById("sliceOverlay");
+    const startBtn = document.getElementById("sliceStart");
+    const scoreEl = document.getElementById("sliceScore");
+    const levelEl = document.getElementById("sliceLevel");
+    const livesEl = document.getElementById("sliceLives");
+    const highEl = document.getElementById("sliceHigh");
+    const HIGH_KEY = "stw_hs_slice";
 
     const W = canvas.width;
     const H = canvas.height;
-    const POINTS_PER_LEVEL = 4;
-    const RADIUS_BASE = 46; // slower start — bigger, easier target
-    const RADIUS_MIN = 20;
-    const RADIUS_STEP = 2.5;
-    const LIFESPAN_BASE = 1150;
-    const LIFESPAN_MIN = 520;
-    const LIFESPAN_STEP = 55;
-    const SPAWN_DELAY_BASE = 260;
-    const SPAWN_DELAY_STEP = 12;
+    const GRAVITY = 0.28;
+    const SCORE_PER_LEVEL = 8;
+    const SPAWN_BASE = 1450; // slower start
+    const SPAWN_MIN = 700;
+    const SPAWN_STEP = 55;
+    const BOMB_BASE = 0.05;
+    const BOMB_MAX = 0.3;
+    const BOMB_STEP = 0.018;
+    const LAUNCH_VY_BASE = -9.3;
+    const LAUNCH_VY_STEP = -0.22;
+    const LAUNCH_VY_MAX = -14;
+    const COMBO_WINDOW = 220; // ms — slices within this window of each other count as a combo
 
-    let score, level, timeLeft, target, running, spawnTimer, countdownTimer, life;
+    let objects, floaters, trail, score, level, lives, running, raf;
+    let spawnAcc, spawnInterval, lastFrame, comboStreak, lastSliceTime;
+    let pointerDown = false;
+    let lastPoint = null;
 
     highEl.textContent = localStorage.getItem(HIGH_KEY) || "0";
 
-    function reset() {
-      score = 0;
-      level = 1;
-      timeLeft = 30;
-      scoreEl.textContent = "0";
-      levelEl.textContent = "1";
-      timeEl.textContent = "30";
-      target = null;
+    function applyLevel() {
+      level = 1 + Math.floor(score / SCORE_PER_LEVEL);
+      levelEl.textContent = String(level);
     }
 
-    function applyLevel() {
-      level = 1 + Math.floor(score / POINTS_PER_LEVEL);
-      levelEl.textContent = String(level);
+    function reset() {
+      objects = [];
+      floaters = [];
+      trail = [];
+      score = 0;
+      lives = 3;
+      spawnAcc = 0;
+      comboStreak = 0;
+      lastSliceTime = 0;
+      pointerDown = false;
+      lastPoint = null;
+      applyLevel();
+      spawnInterval = SPAWN_BASE;
+      scoreEl.textContent = "0";
+      livesEl.textContent = "3";
+    }
+
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function spawnWave() {
+      const count = level >= 4 ? (Math.random() < 0.5 ? 2 : 3) : level >= 2 && Math.random() < 0.5 ? 2 : 1;
+      const bombChance = Math.min(BOMB_MAX, BOMB_BASE + (level - 1) * BOMB_STEP);
+      const vy = Math.max(LAUNCH_VY_MAX, LAUNCH_VY_BASE + (level - 1) * LAUNCH_VY_STEP);
+      for (let i = 0; i < count; i++) {
+        const slice = W / (count + 1);
+        const x = slice * (i + 1) + (Math.random() - 0.5) * slice * 0.6;
+        const isBomb = Math.random() < bombChance;
+        objects.push({
+          x,
+          y: H + 30,
+          vx: (Math.random() - 0.5) * 2.4,
+          vy: vy + (Math.random() - 0.5) * 1.2,
+          radius: isBomb ? 24 : 27,
+          rotation: Math.random() * Math.PI * 2,
+          rotSpeed: (Math.random() - 0.5) * 0.09,
+          color: WHEEL_COLORS[Math.floor(Math.random() * WHEEL_COLORS.length)],
+          type: isBomb ? "bomb" : "ticket",
+          sliced: false,
+        });
+      }
+    }
+
+    function addFloater(x, y, text, color) {
+      floaters.push({ x, y, text, color, alpha: 1, vy: -1.4 });
+    }
+
+    function distToSegment(px, py, x1, y1, x2, y2) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const lenSq = dx * dx + dy * dy;
+      let t = lenSq === 0 ? 0 : ((px - x1) * dx + (py - y1) * dy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+      const cx = x1 + t * dx;
+      const cy = y1 + t * dy;
+      return Math.hypot(px - cx, py - cy);
+    }
+
+    function sliceObject(obj, now) {
+      obj.sliced = true;
+      if (obj.type === "bomb") {
+        triggerBombOver(obj);
+        return;
+      }
+      if (now - lastSliceTime < COMBO_WINDOW) comboStreak += 1;
+      else comboStreak = 1;
+      lastSliceTime = now;
+      const points = comboStreak >= 2 ? comboStreak : 1;
+      score += points;
+      scoreEl.textContent = String(score);
+      applyLevel();
+      addFloater(obj.x, obj.y, comboStreak >= 2 ? `+${points} combo!` : "+1", "#06A77D");
+    }
+
+    function handlePointerMove(x, y) {
+      const now = performance.now();
+      trail.push({ x, y, t: now });
+      if (lastPoint) {
+        for (const obj of objects) {
+          if (obj.sliced) continue;
+          if (distToSegment(obj.x, obj.y, lastPoint.x, lastPoint.y, x, y) < obj.radius + 8) {
+            sliceObject(obj, now);
+          }
+        }
+      }
+      lastPoint = { x, y };
+    }
+
+    function canvasPoint(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (clientX - rect.left) * (W / rect.width),
+        y: (clientY - rect.top) * (H / rect.height),
+      };
+    }
+
+    canvas.addEventListener("mousedown", (e) => {
+      if (!running) return;
+      pointerDown = true;
+      const p = canvasPoint(e.clientX, e.clientY);
+      lastPoint = p;
+      trail.push({ x: p.x, y: p.y, t: performance.now() });
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (!running || !pointerDown) return;
+      const p = canvasPoint(e.clientX, e.clientY);
+      handlePointerMove(p.x, p.y);
+    });
+    window.addEventListener("mouseup", () => {
+      pointerDown = false;
+      lastPoint = null;
+    });
+
+    canvas.addEventListener(
+      "touchstart",
+      (e) => {
+        if (!running) return;
+        e.preventDefault();
+        pointerDown = true;
+        const t = e.touches[0];
+        const p = canvasPoint(t.clientX, t.clientY);
+        lastPoint = p;
+        trail.push({ x: p.x, y: p.y, t: performance.now() });
+      },
+      { passive: false }
+    );
+    canvas.addEventListener(
+      "touchmove",
+      (e) => {
+        if (!running) return;
+        e.preventDefault();
+        const t = e.touches[0];
+        const p = canvasPoint(t.clientX, t.clientY);
+        handlePointerMove(p.x, p.y);
+      },
+      { passive: false }
+    );
+    canvas.addEventListener("touchend", () => {
+      pointerDown = false;
+      lastPoint = null;
+    });
+
+    function drawTicket(obj) {
+      ctx.save();
+      ctx.translate(obj.x, obj.y);
+      ctx.rotate(obj.rotation);
+      const w = obj.radius * 1.9;
+      const h = obj.radius * 1.1;
+      ctx.fillStyle = obj.color;
+      roundRect(-w / 2, -h / 2, w, h, 6);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.75)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.moveTo(0, -h / 2);
+      ctx.lineTo(0, h / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    function drawBomb(obj) {
+      ctx.save();
+      ctx.translate(obj.x, obj.y);
+      ctx.fillStyle = "#1F2233";
+      ctx.beginPath();
+      ctx.arc(0, 0, obj.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#FF5A5F";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(obj.radius * 0.3, -obj.radius * 0.9);
+      ctx.lineTo(obj.radius * 0.6, -obj.radius * 1.4);
+      ctx.stroke();
+      ctx.fillStyle = "#FFB627";
+      ctx.beginPath();
+      ctx.arc(obj.radius * 0.6, -obj.radius * 1.4, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
     function draw() {
       ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
       ctx.fillRect(0, 0, W, H);
-      if (target) {
-        ctx.fillStyle = "#FFB627";
-        ctx.beginPath();
-        ctx.arc(target.x, target.y, target.r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "#7A1E22";
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        ctx.fillStyle = "#7A1E22";
-        ctx.font = "bold 18px 'Space Grotesk', sans-serif";
+
+      const now = performance.now();
+      trail = trail.filter((p) => now - p.t < 160);
+      if (trail.length > 1) {
+        ctx.save();
+        for (let i = 1; i < trail.length; i++) {
+          const p0 = trail[i - 1];
+          const p1 = trail[i];
+          const age = (now - p1.t) / 160;
+          ctx.strokeStyle = `rgba(255,90,95,${1 - age})`;
+          ctx.lineWidth = 6 * (1 - age) + 1;
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(p0.x, p0.y);
+          ctx.lineTo(p1.x, p1.y);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      objects.forEach((obj) => {
+        if (obj.sliced) return;
+        if (obj.type === "bomb") drawBomb(obj);
+        else drawTicket(obj);
+      });
+
+      floaters.forEach((f) => {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, f.alpha);
+        ctx.fillStyle = f.color;
+        ctx.font = "700 15px 'Space Grotesk', sans-serif";
         ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText("★", target.x, target.y + 1);
-      }
+        ctx.fillText(f.text, f.x, f.y);
+        ctx.restore();
+      });
     }
 
-    function spawnTarget() {
-      const r = Math.max(RADIUS_MIN, RADIUS_BASE - (level - 1) * RADIUS_STEP);
-      target = {
-        x: r + Math.random() * (W - r * 2),
-        y: r + Math.random() * (H - r * 2),
-        r,
-      };
-      draw();
-      clearTimeout(life);
-      const lifespan = Math.max(LIFESPAN_MIN, LIFESPAN_BASE - (level - 1) * LIFESPAN_STEP);
-      life = setTimeout(() => {
-        target = null;
-        draw();
-        if (running) scheduleSpawn();
-      }, lifespan);
-    }
-
-    function scheduleSpawn() {
-      clearTimeout(spawnTimer);
-      const delayMin = Math.max(120, SPAWN_DELAY_BASE - (level - 1) * SPAWN_DELAY_STEP);
-      const delay = delayMin + Math.random() * 350;
-      spawnTimer = setTimeout(spawnTarget, delay);
-    }
-
-    function tryHit(clientX, clientY) {
-      if (!running || !target) return;
-      const rect = canvas.getBoundingClientRect();
-      const scaleX = W / rect.width;
-      const scaleY = H / rect.height;
-      const x = (clientX - rect.left) * scaleX;
-      const y = (clientY - rect.top) * scaleY;
-      const dist = Math.hypot(x - target.x, y - target.y);
-      if (dist <= target.r) {
-        score += 1;
-        scoreEl.textContent = String(score);
-        applyLevel();
-        clearTimeout(life);
-        target = null;
-        draw();
-        scheduleSpawn();
-      }
-    }
-
-    canvas.addEventListener("click", (e) => tryHit(e.clientX, e.clientY));
-    canvas.addEventListener(
-      "touchstart",
-      (e) => {
-        e.preventDefault();
-        const t = e.changedTouches[0];
-        tryHit(t.clientX, t.clientY);
-      },
-      { passive: false }
-    );
-
-    function tick() {
-      timeLeft -= 1;
-      timeEl.textContent = String(Math.max(0, timeLeft));
-      if (timeLeft <= 0) {
-        endGame();
-      }
-    }
-
-    function endGame() {
+    function triggerBombOver(bomb) {
       running = false;
-      clearTimeout(spawnTimer);
-      clearTimeout(life);
-      clearInterval(countdownTimer);
-      target = null;
+      for (let i = 0; i < 18; i++) {
+        addFloater(
+          bomb.x + (Math.random() - 0.5) * 60,
+          bomb.y + (Math.random() - 0.5) * 60,
+          "💥",
+          "#FF5A5F"
+        );
+      }
       draw();
+      setTimeout(() => endGame("Boom! You sliced a bomb."), 500);
+    }
+
+    function loop(now) {
+      if (!running) return;
+      const dt = lastFrame ? now - lastFrame : 16;
+      lastFrame = now;
+      spawnAcc += dt;
+
+      spawnInterval = Math.max(SPAWN_MIN, SPAWN_BASE - (level - 1) * SPAWN_STEP);
+      if (spawnAcc >= spawnInterval) {
+        spawnAcc = 0;
+        spawnWave();
+      }
+
+      for (let i = objects.length - 1; i >= 0; i--) {
+        const obj = objects[i];
+        if (obj.sliced) {
+          objects.splice(i, 1);
+          continue;
+        }
+        obj.vy += GRAVITY;
+        obj.x += obj.vx;
+        obj.y += obj.vy;
+        obj.rotation += obj.rotSpeed;
+        if (obj.y - obj.radius > H) {
+          objects.splice(i, 1);
+          if (obj.type === "ticket") {
+            lives -= 1;
+            livesEl.textContent = String(Math.max(0, lives));
+            if (lives <= 0) {
+              endGame("Out of lives.");
+              return;
+            }
+          }
+        }
+      }
+
+      for (let i = floaters.length - 1; i >= 0; i--) {
+        const f = floaters[i];
+        f.y += f.vy;
+        f.alpha -= 0.025;
+        if (f.alpha <= 0) floaters.splice(i, 1);
+      }
+
+      draw();
+      if (running) raf = requestAnimationFrame(loop);
+    }
+
+    function endGame(message) {
+      running = false;
+      if (raf) cancelAnimationFrame(raf);
       const best = Number(localStorage.getItem(HIGH_KEY) || "0");
       if (score > best) localStorage.setItem(HIGH_KEY, String(score));
       highEl.textContent = localStorage.getItem(HIGH_KEY);
       overlay.classList.remove("hidden");
-      overlay.innerHTML = `<h3>Time's up</h3><p>Score: ${score}</p><button type="button" class="spin-btn" id="whackStart" style="margin-top:6px;">PLAY AGAIN</button>`;
-      document.getElementById("whackStart").addEventListener("click", start);
+      overlay.innerHTML = `<h3>${message}</h3><p>Score: ${score} · Reached level ${level}</p><button type="button" class="spin-btn" id="sliceStart" style="margin-top:6px;">PLAY AGAIN</button>`;
+      document.getElementById("sliceStart").addEventListener("click", start);
     }
 
     function start() {
@@ -608,8 +808,8 @@
       draw();
       overlay.classList.add("hidden");
       running = true;
-      scheduleSpawn();
-      countdownTimer = setInterval(tick, 1000);
+      lastFrame = 0;
+      raf = requestAnimationFrame(loop);
     }
 
     startBtn.addEventListener("click", start);

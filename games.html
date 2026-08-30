@@ -12,7 +12,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Games — Spin the Wheel Decision Maker</title>
-<meta name="description" content="Five quick, free arcade games to play while you wait for the wheel: Ticket Grab, Wedge Dodge, Whack the Prize, Ticket Muncher, and Balloon Rise.">
+<meta name="description" content="Five quick, free arcade games to play while you wait for the wheel: Ticket Grab, Wedge Dodge, Ticket Slice, Ticket Muncher, and Balloon Rise.">
 <link rel="canonical" href="https://www.spinthewheeldecisionmaker.com/games.html">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -48,7 +48,7 @@
       <div class="games-tabs" role="tablist" aria-label="Choose a game">
         <button class="games-tab" role="tab" aria-selected="true" data-game="snake">🎟️ Ticket Grab</button>
         <button class="games-tab" role="tab" aria-selected="false" data-game="dodge">🎡 Wedge Dodge</button>
-        <button class="games-tab" role="tab" aria-selected="false" data-game="whack">🎯 Whack the Prize</button>
+        <button class="games-tab" role="tab" aria-selected="false" data-game="slice">🔪 Ticket Slice</button>
         <button class="games-tab" role="tab" aria-selected="false" data-game="pacman">👻 Ticket Muncher</button>
         <button class="games-tab" role="tab" aria-selected="false" data-game="flyer">🎈 Balloon Rise</button>
       </div>
@@ -130,33 +130,34 @@
       </div>
 
       <!-- WHACK THE PRIZE -->
-      <div class="game-panel" id="panel-whack">
+      <div class="game-panel" id="panel-slice">
         <div class="game-layout">
           <div class="game-stage" data-aspect="1">
             <button type="button" class="fullscreen-btn" aria-label="Fullscreen">⛶</button>
             <div class="game-hud">
-              <div class="stat"><span class="n" id="whackScore">0</span><span class="l">Score</span></div>
-              <div class="stat"><span class="n" id="whackLevel">1</span><span class="l">Level</span></div>
-              <div class="stat"><span class="n" id="whackTime">30</span><span class="l">Seconds</span></div>
+              <div class="stat"><span class="n" id="sliceScore">0</span><span class="l">Score</span></div>
+              <div class="stat"><span class="n" id="sliceLevel">1</span><span class="l">Level</span></div>
+              <div class="stat"><span class="n" id="sliceLives">3</span><span class="l">Lives</span></div>
             </div>
             <div class="game-canvas-wrap">
-              <canvas id="whackCanvas" width="440" height="440"></canvas>
-              <div class="game-overlay" id="whackOverlay">
-                <h3>Whack the Prize</h3>
-                <p>Click the prize before it disappears. 30 seconds, and it only gets faster.</p>
-                <button type="button" class="spin-btn" id="whackStart" style="margin-top:6px;">START</button>
+              <canvas id="sliceCanvas" width="440" height="440"></canvas>
+              <div class="game-overlay" id="sliceOverlay">
+                <h3>Ticket Slice</h3>
+                <p>Swipe or drag through the flying tickets. Avoid the bombs — one slice and it's over.</p>
+                <button type="button" class="spin-btn" id="sliceStart" style="margin-top:6px;">START</button>
               </div>
             </div>
           </div>
           <aside class="game-side">
             <h3>How to play</h3>
             <ul>
-              <li>Click the prize circle as soon as it appears</li>
-              <li>Each hit shrinks the window a little more</li>
-              <li>30 seconds on the clock, no penalty for a miss</li>
-              <li>Chase your best score before time runs out</li>
+              <li>Swipe (or click-drag with a mouse) across flying tickets to slice them</li>
+              <li>Slice several in one swipe for a combo bonus</li>
+              <li>Never slice a bomb — it ends the run instantly</li>
+              <li>Letting a ticket fall unsliced costs a life; three lives and you're out</li>
+              <li>It speeds up and throws more at once as you level up</li>
             </ul>
-            <div class="high">Best score <b id="whackHigh">0</b></div>
+            <div class="high">Best score <b id="sliceHigh">0</b></div>
           </aside>
         </div>
       </div>
